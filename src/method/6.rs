@@ -13,7 +13,8 @@ impl TrafficLightColor {
         match *self {
             TrafficLightColor::Red => "red".to_string(),
             TrafficLightColor::Yellow => "yellow".to_string(),
-            TrafficLightColor::Green => "green".to_string(),
+            // 可以使用 Self 关键字 Self 就是 TrafficLightColor 注意大小写
+            Self::Green => "green".to_string(),
         }
     }
 }
