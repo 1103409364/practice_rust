@@ -12,7 +12,7 @@ fn main() {
     let result = multiply("10", "2");
     assert_eq!(result, Ok(20));
 
-    let result = multiply("t", "2");
+    let result = multiply("4", "2");
     assert_eq!(result.unwrap(), 8);
 
     println!("Success!")
