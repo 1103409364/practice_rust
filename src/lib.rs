@@ -38,7 +38,8 @@
 
 //     pub fn cook_order() {}
 // }
-
+// 使用 pub use 进行再导出
+pub use crate::front_of_house::hosting;
 mod back_of_house;
 mod front_of_house;
 pub fn eat_at_restaurant() -> String {
