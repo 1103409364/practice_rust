@@ -38,6 +38,9 @@
 
 //     pub fn cook_order() {}
 // }
+
+/*! lib二进制包的依赖 Crates，注释示例 */
+
 // 使用 pub use 进行再导出
 pub use crate::front_of_house::hosting;
 mod back_of_house;
