@@ -1,20 +1,6 @@
-// 一个典型的 main 函数长这样:
+mod front_of_house;
 
-// fn main() {
-//     println!("Hello World!");
-// }
-// 事实上 main 函数还可以返回一个 Result 类型：如果 main 函数内部发生了错误，那该错误会被返回并且打印出一条错误的 debug 信息。
-
-
-use std::num::ParseIntError;
-
-fn main() -> Result<(), ParseIntError> {
-    let number_str = "10";
-    // let number = match number_str.parse::<i32>() {
-    //     Ok(number)  => number,
-    //     Err(e) => return Err(e),
-    // };
-    let number = number_str.parse::<i32>()?;
-    println!("{}", number);
-    Ok(())
+fn main() {
+    assert_eq!(front_of_house::hosting::seat_at_table(), "sit down please");
+    assert_eq!(hello_package::eat_at_restaurant(), "yummy yummy!");
 }
