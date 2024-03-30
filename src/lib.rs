@@ -49,3 +49,16 @@ pub fn eat_at_restaurant() -> String {
 
     String::from("yummy yummy!")
 }
+/** `add_two` 将指定值加2 文档注释：支持 markdown 语法
+
+
+```
+let arg = 5;
+let answer = practice_rust::add_two(arg);
+
+assert_eq!(7, answer);
+```
+*/
+pub fn add_two(x: i32) -> i32 {
+    x + 2
+}
