@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::fs;
+use std::{fs, vec};
 
 // Config 中存储的并不是 &str 这样的引用类型，而是一个 String 字符串，也就是 Config 并没有去借用外部的字符串，而是拥有内部字符串的所有权。
 pub struct Config {
@@ -25,6 +25,37 @@ impl Config {
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(config.file_path)?;
 
-    println!("with text:\n{contents}");
+    // println!("with text:\n{contents}");
+    for line in search(&config.query, &contents) {
+        println!("{line}")
+    }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn one_result() {
+        let query = "duct";
+        let contents = "\
+Rust:
+safe, fast, productive.
+Pick three.";
+        assert_eq!(vec!["safe, fast, productive."], search(query, contents));
+    }
+}
+// 返回引用类型需要标出 lifetime
+pub fn search<'a>(query: &'a str, contents: &'a str) -> Vec<&'a str> {
+    let mut results = Vec::new();
+
+    for line in contents.lines() {
+        if line.contains(query) {
+            results.push(line)
+        }
+    }
+
+    // return results;
+    results
 }
