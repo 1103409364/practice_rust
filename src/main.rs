@@ -6,7 +6,7 @@ fn main() {
     // dbg stands for debug print。dbg 是 Rust 标准库中的一个宏，可以打印变量的值
     // env::args 读取到的参数中第一个就是程序的可执行路径名。
     // dbg!(args);
-    let config = parse_config(&args);
+    let config = Config::new(&args);
 
     println!("Searching for {}", config.query);
     println!("In file {}", config.file_path);
@@ -22,9 +22,10 @@ struct Config {
     file_path: String,
 }
 
-fn parse_config(args: &[String]) -> Config {
-    let query = args[1].clone();
-    let file_path = args[2].clone();
-
-    Config { query, file_path }
+impl Config {
+    fn new(args: &[String]) -> Self {
+        let query = args[1].clone();
+        let file_path = args[2].clone();
+        Self { query, file_path }
+    }
 }
