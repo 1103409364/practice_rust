@@ -1,5 +1,5 @@
 use std::env;
-// use std::error::Error;
+use std::error::Error;
 use std::fs;
 use std::process;
 
@@ -19,8 +19,11 @@ fn main() {
 
     println!("Searching for {}", config.query);
     println!("In file {}", config.file_path);
-
-    run(config);
+    // if let 模式匹配 Err(e) 匹配到错误
+    if let Err(e) = run(config) {
+        println!("Application error: {e}");
+        process::exit(1);
+    };
 }
 // Config 中存储的并不是 &str 这样的引用类型，而是一个 String 字符串，也就是 Config 并没有去借用外部的字符串，而是拥有内部字符串的所有权。
 struct Config {
@@ -43,13 +46,9 @@ impl Config {
         Ok(Self { query, file_path })
     }
 }
-// -> Result<(), Box<dyn Error>>
-fn run(config: Config) {
-    let contents = fs::read_to_string(config.file_path).unwrap_or_else(|err| {
-        println!("Should have been able to read the file: {err}");
-        process::exit(1);
-    });
+fn run(config: Config) -> Result<(), Box<dyn Error>> {
+    let contents = fs::read_to_string(config.file_path)?;
 
     println!("with text:\n{contents}");
-    // Ok(())
+    Ok(())
 }
