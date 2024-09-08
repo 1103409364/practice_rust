@@ -22,6 +22,7 @@ impl Trie {
         for c in word.as_bytes() {
             let index = (c - b'a') as usize;
             let next = &mut node.children[index];
+            // get_or_insert_with 是一个用于处理 Option 类型的方法，常用于 std::collections 库中的数据结构，比如 HashMap 或 BTreeMap。它的主要功能是在 Option 中获取一个值，如果值不存在，则插入一个新值。
             node = next.get_or_insert_with(Box::<Node>::default);
         }
         node.end = true;
