@@ -1,10 +1,10 @@
 // 字典 树 定义
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Trie {
     root: Node,
 }
 // 节点
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Node {
     end: bool,
     children: [Option<Box<Node>>; 26], // 字 符 节 点 列 表
@@ -50,6 +50,24 @@ impl Trie {
         }
         Some(node)
     }
+    fn print(&self) {
+        self.print_node(&self.root, String::new());
+    }
+
+    fn print_node(&self, node: &Node, prefix: String) {
+        if node.end {
+            println!("{}", prefix); // 打印完整的单词
+        }
+
+        for (i, child) in node.children.iter().enumerate() {
+            if let Some(ref child_node) = child {
+                self.print_node(
+                    child_node,
+                    format!("{}{}", prefix, (b'a' + i as u8) as char),
+                );
+            }
+        }
+    }
 }
 
 fn main() {
@@ -67,4 +85,6 @@ fn main() {
     println!("word 'apples' in Trie: {res2}");
     println!("prefix 'ins' in Trie: {res3}");
     println!("prefix 'ina' in Trie: {res4}");
+    // println!("trie {:?}", trie)
+     trie.print(); // 打印所有单词
 }
