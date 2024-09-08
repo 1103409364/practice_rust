@@ -7,7 +7,7 @@ struct Trie {
 #[derive(Default, Debug)]
 struct Node {
     end: bool,
-    children: [Option<Box<Node>>; 26], // 字 符 节 点 列 表
+    children: [Option<Box<Node>>; 26], // 字符节点列表
 }
 
 impl Trie {
@@ -21,23 +21,23 @@ impl Trie {
         // 逐 个 字 符 插 入
         for c in word.as_bytes() {
             let index = (c - b'a') as usize;
-            let next = &mut node.children[index];
-            // get_or_insert_with 是一个用于处理 Option 类型的方法，常用于 std::collections 库中的数据结构，比如 HashMap 或 BTreeMap。它的主要功能是在 Option 中获取一个值，如果值不存在，则插入一个新值。
-            node = next.get_or_insert_with(Box::<Node>::default);
+            let next = &mut node.children[index]; // 用索引表示字符。不是在 Node 存具体的值
+                                                  // get_or_insert_with 是一个用于处理 Option 类型的方法，常用于 std::collections 库中的数据结构，比如 HashMap 或 BTreeMap。它的主要功能是在 Option 中获取一个值，如果值不存在，则插入一个新值。
+            node = next.get_or_insert_with(Box::<Node>::default); // Node 实现了 Default Trait，默认 Node 实例：Node { children: [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None], end: false }
         }
         node.end = true;
     }
 
     fn search(&self, word: &str) -> bool {
-        self.word_node(word).map_or(false, |n| n.end)
+        self.word_node(word).map_or(false, |n| n.end) // map_or 是 Option 类型的方法，第一个参数是默认值。用于对 Option 中的值进行处理。如果 Option 是 Some，会应用一个函数并返回结果；如果是 None，则返回一个提供的默认值。这使得在处理可选值时方法更加灵活。
     }
 
-    // 判 断 是 否 存 在 以 某 个 前 缀 开 头 的 单 词
+    // 判断是否存在以某个前缀开头的单词
     fn start_with(&self, prefix: &str) -> bool {
-        self.word_node(prefix).is_some()
+        self.word_node(prefix).is_some() // is_some 是 Option 类型的方法，用于检查 Option 是否包含一个值。具体来说，如果 Option 是 Some，is_some 返回 true；如果是 None，返回 false
     }
 
-    // 前缀 字 符串
+    // 前缀字符串
     // wps: word_prefix_string
     fn word_node(&self, wps: &str) -> Option<&Node> {
         let mut node = &self.root;
@@ -86,5 +86,5 @@ fn main() {
     println!("prefix 'ins' in Trie: {res3}");
     println!("prefix 'ina' in Trie: {res4}");
     // println!("trie {:?}", trie)
-     trie.print(); // 打印所有单词
+    trie.print(); // 打印所有单词
 }
