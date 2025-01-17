@@ -68,6 +68,7 @@ async fn get_interfaces() -> impl Responder {
 /// 返回一个可用的端口号，如果没有可用的端口则返回 None
 fn find_available_port() -> Option<u16> {
     for port in 8080..9000 {
+        // TcpListener::bind 创建的 TcpListener 对象在离开作用域时会自动被 drop，从而释放占用的端口。因此，我们不需要显式地调用 drop。
         match TcpListener::bind(("127.0.0.1", port)) {
             Ok(_) => return Some(port),
             Err(_) => continue,
