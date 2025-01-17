@@ -2,22 +2,23 @@ use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use mac_address::mac_address_by_name;
 use serde::Serialize;
 use if_addrs::get_if_addrs;
+use std::net::TcpListener;
 
-/// 网络接口信息的数据结构
+// 网络接口信息的数据结构
 #[derive(Serialize)]
 struct InterfaceInfo {
-    /// MAC 地址，可能为 None（如果无法获取）
+    // MAC 地址，可能为 None（如果无法获取）
     mac_address: Option<String>,
-    /// 网络接口名称（如 "eth0", "en0" 等）
+    // 网络接口名称（如 "eth0", "en0" 等）
     interface_name: String,
-    /// IP 地址
+    // IP 地址
     ip_address: String,
-    /// 接口是否活跃
+    // 接口是否活跃
     is_active: bool,
 }
 
-/// 处理 GET /interfaces 请求
-/// 返回所有活跃的网络接口信息
+// 处理 GET /interfaces 请求
+// 返回所有活跃的网络接口信息
 #[get("/interfaces")]
 async fn get_interfaces() -> impl Responder {
     // 获取系统中的所有网络接口
@@ -41,7 +42,7 @@ async fn get_interfaces() -> impl Responder {
                         .ok()           // 将 Result 转换为 Option
                         .flatten()      // 展平嵌套的 Option
                         .map(|mac| mac.to_string());
-                    
+
                     // 只返回有 MAC 地址的接口信息
                     mac.map(|mac_addr| InterfaceInfo {
                         mac_address: Some(mac_addr),
@@ -63,17 +64,30 @@ async fn get_interfaces() -> impl Responder {
     }
 }
 
-/// 程序入口点
+/// 查找可用的端口
+/// 返回一个可用的端口号，如果没有可用的端口则返回 None
+fn find_available_port() -> Option<u16> {
+    for port in 8080..9000 {
+        match TcpListener::bind(("127.0.0.1", port)) {
+            Ok(_) => return Some(port),
+            Err(_) => continue,
+        }
+    }
+    None
+}
+
+// 程序入口点
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!("Starting server at http://127.0.0.1:8080");
-    
+    let port = find_available_port().expect("No available ports found");
+    println!("Starting server at http://127.0.0.1:{}", port);
+
     // 创建并启动 HTTP 服务器
     HttpServer::new(|| {
         App::new()
             .service(get_interfaces)  // 注册 /interfaces 端点
     })
-    .bind(("127.0.0.1", 8080))?     // 绑定到本地 8080 端口
+    .bind(("127.0.0.1", port))?     // 绑定到本地端口
     .run()                          // 运行服务器
     .await
 }
