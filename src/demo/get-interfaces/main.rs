@@ -33,7 +33,9 @@ async fn get_interfaces() -> impl Responder {
                     !interface.is_loopback()  // 过滤掉回环接口
                         && ip != "0.0.0.0"    // 过滤掉未配置 IP 的接口
                         && ip != "127.0.0.1"  // 过滤掉 IPv4 回环地址
-                        && ip != "::1"        // 过滤掉 IPv6 回环地址
+                        // && ip != "::1"        // 过滤掉 IPv6 回环地址
+                        // 过滤掉 IPv6 地址，判断包含冒号的情况
+                        && !ip.contains(':')
                 })
                 // 过滤并映射：只保留能获取到 MAC 地址的接口
                 .filter_map(|interface| {
