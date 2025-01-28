@@ -22,6 +22,8 @@ impl App {
 
 fn main() -> Result<(), std::io::Error> {
     let mut app = App::new("typing.txt")?;
+    // 记录开始时间
+    let start_time = std::time::Instant::now();
     loop {
         println!("{}", app.file_content);
         for (letter1, letter2) in app.user_input.chars().zip(app.file_content.chars()) {
@@ -43,14 +45,23 @@ fn main() -> Result<(), std::io::Error> {
                         app.user_input.push(c);
                     }
                     KeyCode::Enter => {
-                        let total_chars = app.file_content.chars().count();
-                        let total_right = app
+                        let total_words = app.file_content.split_whitespace().count();
+                        let mut total_words_right = 0;
+                        for (word1, word2) in app
                             .user_input
-                            .chars()
-                            .zip(app.file_content.chars())
-                            .filter(|(a, b)| a == b)
-                            .count();
-                        println!("You got {total_right} out of {total_chars}!");
+                            .split_whitespace()
+                            .zip(app.file_content.split_whitespace())
+                        {
+                            // 去除标点符号 使用正则表达式
+                            let word1 = word1.trim_matches(|c: char| !c.is_alphabetic());
+                            let word2 = word2.trim_matches(|c: char| !c.is_alphabetic());
+                            if word1 == word2 {
+                                total_words_right += 1;
+                            }
+                        }
+                        let elapsed_time = start_time.elapsed().as_secs_f64();
+                        let words_per_minute = (total_words_right as f64 / elapsed_time) * 60.0;
+                        println!("You got {total_words_right} out of {total_words}! You took {elapsed_time} seconds. Your typing speed is {words_per_minute} words per minute.");
                         return Ok(());
                     }
                     _ => {}
