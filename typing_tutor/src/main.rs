@@ -43,7 +43,11 @@ fn main() -> Result<(), std::io::Error> {
                     }
                     KeyCode::Esc => break,
                     KeyCode::Char(c) => {
-                        app.user_input.push(c);
+                        let char_len = app.file_content.chars().count();
+                        // 限制输入长度
+                        if app.user_input.chars().count() < char_len {
+                            app.user_input.push(c);
+                        }
                     }
                     KeyCode::Enter => {
                         let total_words = app.file_content.split_whitespace().count();
