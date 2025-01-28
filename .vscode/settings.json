@@ -2,6 +2,7 @@
   "rust-analyzer.showUnlinkedFileNotification": false,
   "editor.tabSize": 4,
   "cSpell.words": [
+    "Colour",
     "crossterm"
   ]
 }

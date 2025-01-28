@@ -1,3 +1,4 @@
+use ansi_term::Colour::Red;
 use crossterm::{
     event::{read, Event, KeyCode, KeyEventKind},
     execute,
@@ -30,7 +31,7 @@ fn main() -> Result<(), std::io::Error> {
             if letter1 == letter2 {
                 print!("{letter2}");
             } else {
-                print!("*");
+                print!("{}", Red.paint(String::from(letter1)));
             }
         }
         println!("_");
