@@ -86,20 +86,36 @@ impl App {
 }
 impl std::fmt::Display for App {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Language: {} \nSearching for: {}\nTitle: {}\nDescription: {}\nExtract: {}\nType: {} \nDetail: {} \nUri: {} \nMethod: {} \nErrorMessage: {}",
-            self.language,
-            self.search_string,
-            self.current_article.title.as_deref().unwrap_or(""),
-            self.current_article.description.as_deref().unwrap_or(""),
-            self.current_article.extract.as_deref().unwrap_or(""),
-            self.current_article.r#type.as_deref().unwrap_or(""),
-            self.current_article.detail.as_deref().unwrap_or(""),
-            self.uri.as_deref().unwrap_or(""),
-            self.method.as_deref().unwrap_or(""),
-            self.error.as_deref().unwrap_or("")
-        )
+        writeln!(f, "Language: {}", self.language)?;
+        writeln!(f, "Searching for: {}", self.search_string)?;
+
+        // Article fields
+        let article_fields = [
+            ("Title", &self.current_article.title),
+            ("Description", &self.current_article.description),
+            ("Extract", &self.current_article.extract),
+            ("Type", &self.current_article.r#type),
+            ("Detail", &self.current_article.detail),
+        ];
+
+        // App fields
+        let app_fields = [
+            ("Uri", &self.uri),
+            ("Method", &self.method),
+            ("ErrorMessage", &self.error),
+        ];
+
+        // Print article fields
+        for (name, value) in article_fields.iter() {
+            writeln!(f, "{}: {}", name, value.as_deref().unwrap_or(""))?;
+        }
+
+        // Print app fields
+        for (name, value) in app_fields.iter() {
+            writeln!(f, "{}: {}", name, value.as_deref().unwrap_or(""))?;
+        }
+
+        Ok(())
     }
 }
 const URL: &str = "wikipedia.org/api/rest_v1/page/summary";
