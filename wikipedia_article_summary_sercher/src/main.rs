@@ -41,51 +41,43 @@ impl App {
 
         Ok(())
     }
-    fn set_language(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    fn handle_input(target: &mut String) -> Result<bool, Box<dyn Error>> {
+        if let Event::Key(key_event) = read()? {
+            if key_event.kind == KeyEventKind::Press {
+                match key_event.code {
+                    KeyCode::Backspace => {
+                        target.pop();
+                    }
+                    KeyCode::Esc => target.clear(),
+                    KeyCode::Enter => return Ok(true),
+                    KeyCode::Char(c) => {
+                        target.push(c);
+                    }
+                    _ => {}
+                }
+            }
+            execute!(stdout(), Clear(ClearType::All))?;
+        }
+        Ok(false)
+    }
+
+    fn set_language(&mut self) -> Result<(), Box<dyn Error>> {
         loop {
             println!("Please enter correct language!");
             println!("{self}");
-            if let Event::Key(key_event) = read()? {
-                if key_event.kind == KeyEventKind::Press {
-                    match key_event.code {
-                        KeyCode::Backspace => {
-                            self.language.pop();
-                        }
-                        KeyCode::Esc => self.language.clear(),
-                        KeyCode::Enter => {
-                            if LANGUAGES.iter().any(|&s| s == self.language) {
-                                return Ok(());
-                            }
-                        }
-                        KeyCode::Char(c) => {
-                            self.language.push(c);
-                        }
-                        _ => {}
-                    }
+            if App::handle_input(&mut self.language)? {
+                if LANGUAGES.iter().any(|&s| s == self.language) {
+                    return Ok(());
                 }
-                execute!(stdout(), Clear(ClearType::All))?;
             }
         }
     }
-    // &mut self 是 self: &mut Self 的简写
-    fn search(self: &mut Self) -> Result<(), Box<dyn Error>> {
+
+    fn search(&mut self) -> Result<(), Box<dyn Error>> {
         loop {
             println!("{self}");
-            if let Event::Key(key_event) = read()? {
-                if key_event.kind == KeyEventKind::Press {
-                    match key_event.code {
-                        KeyCode::Backspace => {
-                            self.search_string.pop();
-                        }
-                        KeyCode::Esc => self.search_string.clear(),
-                        KeyCode::Enter => self.get_article()?,
-                        KeyCode::Char(c) => {
-                            self.search_string.push(c);
-                        }
-                        _ => {}
-                    }
-                }
-                execute!(stdout(), Clear(ClearType::All))?;
+            if App::handle_input(&mut self.search_string)? {
+                self.get_article()?;
             }
         }
     }
