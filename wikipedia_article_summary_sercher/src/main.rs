@@ -12,6 +12,7 @@ struct CurrentArticle {
     title: String,
     description: String,
     extract: String,
+    r#type: String, // type 是关键字，用于定义类型别名。使用 r# 转义关键字
 }
 #[derive(Debug, Default)]
 struct App {
@@ -31,11 +32,12 @@ impl std::fmt::Display for App {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            " Searching for: {} Title: {} -----------Description: {} ------------ {}",
+            "Searching for: {}\nTitle: {}\nDescription: {}\nextract: {}\ntype: {}",
             self.search_string,
             self.current_article.title,
             self.current_article.description,
-            self.current_article.extract
+            self.current_article.extract,
+            self.current_article.r#type
         )
     }
 }
