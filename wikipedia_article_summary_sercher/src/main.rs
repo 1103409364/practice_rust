@@ -41,6 +41,54 @@ impl App {
 
         Ok(())
     }
+    fn set_language(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        loop {
+            println!("Please enter correct language!");
+            println!("{self}");
+            if let Event::Key(key_event) = read()? {
+                if key_event.kind == KeyEventKind::Press {
+                    match key_event.code {
+                        KeyCode::Backspace => {
+                            self.language.pop();
+                        }
+                        KeyCode::Esc => self.language.clear(),
+                        KeyCode::Enter => {
+                            if LANGUAGES.iter().any(|&s| s == self.language) {
+                                return Ok(());
+                            }
+                        }
+                        KeyCode::Char(c) => {
+                            self.language.push(c);
+                        }
+                        _ => {}
+                    }
+                }
+                execute!(stdout(), Clear(ClearType::All))?;
+            }
+        }
+    }
+    // &mut self 是 self: &mut Self 的简写
+    fn search(self: &mut Self) -> Result<(), Box<dyn Error>> {
+        loop {
+            println!("{self}");
+            if let Event::Key(key_event) = read()? {
+                if key_event.kind == KeyEventKind::Press {
+                    match key_event.code {
+                        KeyCode::Backspace => {
+                            self.search_string.pop();
+                        }
+                        KeyCode::Esc => self.search_string.clear(),
+                        KeyCode::Enter => self.get_article()?,
+                        KeyCode::Char(c) => {
+                            self.search_string.push(c);
+                        }
+                        _ => {}
+                    }
+                }
+                execute!(stdout(), Clear(ClearType::All))?;
+            }
+        }
+    }
 }
 impl std::fmt::Display for App {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -63,59 +111,10 @@ impl std::fmt::Display for App {
 const URL: &str = "wikipedia.org/api/rest_v1/page/summary";
 const LANGUAGES: [&str; 2] = ["zh", "en"];
 
-fn handle_language(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
-    loop {
-        println!("Please enter correct language!");
-        println!("{app}");
-        if let Event::Key(key_event) = read()? {
-            if key_event.kind == KeyEventKind::Press {
-                match key_event.code {
-                    KeyCode::Backspace => {
-                        app.language.pop();
-                    }
-                    KeyCode::Esc => app.language.clear(),
-                    KeyCode::Enter => {
-                        if LANGUAGES.iter().any(|&s| s == app.language) {
-                            return Ok(());
-                        }
-                    }
-                    KeyCode::Char(c) => {
-                        app.language.push(c);
-                    }
-                    _ => {}
-                }
-            }
-            execute!(stdout(), Clear(ClearType::All))?;
-        }
-    }
-}
-
-fn handle_search(app: &mut App) -> Result<(), Box<dyn Error>> {
-    loop {
-        println!("{app}");
-        if let Event::Key(key_event) = read()? {
-            if key_event.kind == KeyEventKind::Press {
-                match key_event.code {
-                    KeyCode::Backspace => {
-                        app.search_string.pop();
-                    }
-                    KeyCode::Esc => app.search_string.clear(),
-                    KeyCode::Enter => app.get_article()?,
-                    KeyCode::Char(c) => {
-                        app.search_string.push(c);
-                    }
-                    _ => {}
-                }
-            }
-            execute!(stdout(), Clear(ClearType::All))?;
-        }
-    }
-}
-
 fn main() -> Result<(), Box<dyn Error>> {
     let mut app = App::default();
-    match handle_language(&mut app) {
-        Ok(()) => handle_search(&mut app),
+    match app.set_language() {
+        Ok(()) => app.search(), // 取引用传给方法
         Err(e) => Err(e),
     }
 }
