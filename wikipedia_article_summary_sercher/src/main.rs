@@ -16,6 +16,7 @@ struct CurrentArticle {
     detail: Option<String>,
     uri: Option<String>,
     method: Option<String>,
+    error: Option<String>,
 }
 #[derive(Debug, Default)]
 struct App {
@@ -24,10 +25,16 @@ struct App {
 }
 impl App {
     fn get_article(&mut self) -> Result<(), Box<dyn Error>> {
-        let text = get(format!("{URL}/{}", self.search_string))?.text()?;
-        if let Ok(article) = serde_json::from_str::<CurrentArticle>(&text) {
-            self.current_article = article;
+        match get(format!("{URL}/{}", self.search_string)) {
+            Ok(res) => {
+                let text = res.text()?;
+                if let Ok(article) = serde_json::from_str::<CurrentArticle>(&text) {
+                    self.current_article = article;
+                }
+            }
+            Err(error) => self.current_article.error = Some(error.to_string()),
         }
+
         Ok(())
     }
 }
@@ -35,7 +42,7 @@ impl std::fmt::Display for App {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Searching for: {}\nTitle: {}\nDescription: {}\nextract: {}\ntype: {} \ndetail:{} \nuri:{} \nmethod: {}",
+            "Searching for: {}\nTitle: {}\nDescription: {}\nExtract: {}\nType: {} \nDetail: {} \nUri: {} \nMethod: {} \nErrorMessage: {}",
             self.search_string,
             self.current_article.title.as_deref().unwrap_or(""),
             self.current_article.description.as_deref().unwrap_or(""),
@@ -43,7 +50,8 @@ impl std::fmt::Display for App {
             self.current_article.r#type.as_deref().unwrap_or(""),
             self.current_article.detail.as_deref().unwrap_or(""),
             self.current_article.uri.as_deref().unwrap_or(""),
-            self.current_article.method.as_deref().unwrap_or("")
+            self.current_article.method.as_deref().unwrap_or(""),
+            self.current_article.error.as_deref().unwrap_or("")
         )
     }
 }
