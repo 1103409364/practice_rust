@@ -25,6 +25,7 @@ struct App {
     method: Option<String>,
 }
 impl App {
+    // &mut self 是 self: &mut Self 的简写
     fn get_article(&mut self) -> Result<(), Box<dyn Error>> {
         match get(format!(
             "https://{}.{URL}/{}",
@@ -41,6 +42,7 @@ impl App {
 
         Ok(())
     }
+    // cannot borrow `*self` as mutable more than once at a time 这个方法不能加 &mut self
     fn handle_input(target: &mut String) -> Result<bool, Box<dyn Error>> {
         if let Event::Key(key_event) = read()? {
             if key_event.kind == KeyEventKind::Press {
