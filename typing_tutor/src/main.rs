@@ -35,8 +35,7 @@ impl App {
     fn handle_char(&mut self, c: char) {
         // 处理特殊字符，例如重音符号
         if let Some(map) = self.char_map.get(&c) {
-            let pre_char = self.user_input.pop();
-            if let Some(pre_char) = pre_char {
+            if let Some(pre_char) = self.user_input.pop() {
                 if let Some(new_char) = map.get(&pre_char) {
                     self.push_char(*new_char);
                 } else {
@@ -52,55 +51,52 @@ impl App {
     }
     // 获取特殊字符 map
     fn get_char_map() -> HashMap<char, HashMap<char, char>> {
-        let mut map = HashMap::new();
-        for (_i, c) in "'`^~\"".chars().enumerate() {
-            let mut inner_map = HashMap::new();
-            match c {
-                '\'' => {
-                    // for (letter1, letter2) in "aeiouAEIOU".chars().zip("áéíóúÁÉÍÓÚ".chars())
-                    // {
-                    //     inner_map.insert(letter1, letter2);
-                    // }
-                    "aeiouAEIOU".chars().zip("áéíóúÁÉÍÓÚ".chars()).for_each(
-                        |(letter1, letter2)| {
-                            inner_map.insert(letter1, letter2);
-                        },
-                    );
+        "'`^~\""
+            .chars()
+            .enumerate()
+            .fold(HashMap::new(), |mut map, (_i, c)| {
+                let mut inner_map = HashMap::new();
+                match c {
+                    '\'' => {
+                        "aeiouAEIOU".chars().zip("áéíóúÁÉÍÓÚ".chars()).for_each(
+                            |(letter1, letter2)| {
+                                inner_map.insert(letter1, letter2);
+                            },
+                        );
+                    }
+                    '`' => {
+                        "aeiouAEIOU".chars().zip("àèìòùÀÈÌÒÙ".chars()).for_each(
+                            |(letter1, letter2)| {
+                                inner_map.insert(letter1, letter2);
+                            },
+                        );
+                    }
+                    '^' => {
+                        "aeiouAEIOU".chars().zip("âêîôûÂÊÎÔÛ".chars()).for_each(
+                            |(letter1, letter2)| {
+                                inner_map.insert(letter1, letter2);
+                            },
+                        );
+                    }
+                    '~' => {
+                        "aeiouAEIOU".chars().zip("ãẽĩõũÃẼĨÕŨ".chars()).for_each(
+                            |(letter1, letter2)| {
+                                inner_map.insert(letter1, letter2);
+                            },
+                        );
+                    }
+                    '"' => {
+                        "aeiouAEIOU".chars().zip("äëïöüÄËÏÖÜ".chars()).for_each(
+                            |(letter1, letter2)| {
+                                inner_map.insert(letter1, letter2);
+                            },
+                        );
+                    }
+                    _ => {}
                 }
-                '`' => {
-                    // 改用 forEach
-                    "aeiouAEIOU".chars().zip("àèìòùÀÈÌÒÙ".chars()).for_each(
-                        |(letter1, letter2)| {
-                            inner_map.insert(letter1, letter2);
-                        },
-                    );
-                }
-                '^' => {
-                    "aeiouAEIOU".chars().zip("âêîôûÂÊÎÔÛ".chars()).for_each(
-                        |(letter1, letter2)| {
-                            inner_map.insert(letter1, letter2);
-                        },
-                    );
-                }
-                '~' => {
-                    "aeiouAEIOU".chars().zip("ãẽĩõũÃẼĨÕŨ".chars()).for_each(
-                        |(letter1, letter2)| {
-                            inner_map.insert(letter1, letter2);
-                        },
-                    );
-                }
-                '"' => {
-                    "aeiouAEIOU".chars().zip("äëïöüÄËÏÖÜ".chars()).for_each(
-                        |(letter1, letter2)| {
-                            inner_map.insert(letter1, letter2);
-                        },
-                    );
-                }
-                _ => {}
-            }
-            map.insert(c, inner_map);
-        }
-        map
+                map.insert(c, inner_map);
+                map
+            })
     }
 }
 
