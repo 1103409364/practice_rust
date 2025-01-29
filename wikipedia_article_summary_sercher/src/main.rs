@@ -9,10 +9,13 @@ use std::{error::Error, io::stdout};
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 struct CurrentArticle {
-    title: String,
-    description: String,
-    extract: String,
-    r#type: String, // type 是关键字，用于定义类型别名。使用 r# 转义关键字
+    title: Option<String>,
+    description: Option<String>,
+    extract: Option<String>,
+    r#type: Option<String>, // type 是关键字，用于定义类型别名。使用 r# 转义关键字
+    detail: Option<String>,
+    uri: Option<String>,
+    method: Option<String>,
 }
 #[derive(Debug, Default)]
 struct App {
@@ -32,12 +35,15 @@ impl std::fmt::Display for App {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Searching for: {}\nTitle: {}\nDescription: {}\nextract: {}\ntype: {}",
+            "Searching for: {}\nTitle: {}\nDescription: {}\nextract: {}\ntype: {} \ndetail:{} \nuri:{} \nmethod: {}",
             self.search_string,
-            self.current_article.title,
-            self.current_article.description,
-            self.current_article.extract,
-            self.current_article.r#type
+            self.current_article.title.as_deref().unwrap_or(""),
+            self.current_article.description.as_deref().unwrap_or(""),
+            self.current_article.extract.as_deref().unwrap_or(""),
+            self.current_article.r#type.as_deref().unwrap_or(""),
+            self.current_article.detail.as_deref().unwrap_or(""),
+            self.current_article.uri.as_deref().unwrap_or(""),
+            self.current_article.method.as_deref().unwrap_or("")
         )
     }
 }
