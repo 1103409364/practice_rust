@@ -16,7 +16,12 @@ struct App {
 
 impl App {
     fn new(file_name: &str) -> Result<Self, std::io::Error> {
-        let file_content = read_to_string(file_name)?;
+        let mut file_content = read_to_string(file_name)?;
+        // 去除 e 字符
+        file_content = file_content
+            .chars()
+            .filter(|&c| c.to_ascii_lowercase() != 'e')
+            .collect();
         Ok(Self {
             file_content,
             user_input: String::new(),
