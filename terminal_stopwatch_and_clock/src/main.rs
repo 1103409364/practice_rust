@@ -1,5 +1,5 @@
 // 引入必要的库
-use chrono::offset::Utc;
+use chrono::{offset::Utc, DateTime, FixedOffset, TimeZone};
 use crossterm::event::{poll, read, Event, KeyCode, KeyEventKind};
 use ratatui::{
     backend::CrosstermBackend,
@@ -75,7 +75,15 @@ fn block_with(input: &str) -> Block {
 }
 // 获取当前UTC时间并格式化为字符串
 fn utc_pretty() -> String {
-    Utc::now().format("%Y/%m/%d %H:%M:%S").to_string()
+    // east_opt 参数毫秒 east 已经废弃
+    let beijing_offset = FixedOffset::east_opt(8 * 3600).expect("FixedOffset::east out of bounds");
+    let beijing_time = beijing_offset
+        .from_utc_datetime(&Utc::now().naive_utc())
+        .format("%Y/%m/%d %H:%M:%S")
+        .to_string();
+
+    let london_time = Utc::now().format("%Y/%m/%d %H:%M:%S").to_string();
+    format!("{london_time}\n{beijing_time} Bei Jing")
 }
 
 fn main() -> Result<(), anyhow::Error> {
