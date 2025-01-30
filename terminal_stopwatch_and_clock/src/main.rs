@@ -12,6 +12,7 @@ use ratatui::{
 use reqwest::blocking::get; // 使用同步方法，阻塞主线程
 use serde::{Deserialize, Serialize};
 use std::{
+    borrow::Cow,
     io::stdout,
     thread::sleep,
     time::{Duration, Instant},
@@ -41,10 +42,10 @@ impl Stopwatch {
         }
     }
     // 获取当前时间
-    fn get_time(&self) -> String {
+    fn get_time(&self) -> Cow<'static, str> {
         use StopwatchState::*;
         match self.state {
-            NotStarted => String::from("00:00:00"), // 如果未启动，返回 0:00:00
+            NotStarted => Cow::Borrowed("00:00:00"),
             Running => {
                 // 如果正在运行，计算经过的时间
                 let mut elapsed = self.now.elapsed().as_millis();
@@ -54,9 +55,9 @@ impl Stopwatch {
                 elapsed -= seconds * 1000;
                 let split_seconds = elapsed / 10;
                 // 指定最小宽度 2，> 右对齐，并且使用 0 在左侧填充
-                format!("{minutes:0>2}:{seconds:0>2}:{split_seconds:0>2}") // 格式化时间为 分:秒:毫秒
+                Cow::Owned(format!("{minutes:0>2}:{seconds:0>2}:{split_seconds:0>2}"))
             }
-            Done => self.display.clone(), // 如果已停止，返回停止时的时间
+            Done => Cow::Owned(self.display.to_string()), // 如果已停止，返回停止时的时间
         }
     }
     // 切换秒表状态
@@ -70,7 +71,7 @@ impl Stopwatch {
             }
             Running => {
                 // 如果正在运行，设置为停止状态并记录当前时间
-                self.display = self.get_time();
+                self.display = self.get_time().into_owned();
                 self.state = Done;
             }
             Done => self.state = NotStarted, // 如果已停止，设置为未启动状态
@@ -97,24 +98,24 @@ fn utc_pretty() -> String {
 // WeatherData 结构体用于存储天气数据
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WeatherData {
-    pub latitude: f64,          // 纬度
-    pub longitude: f64,         // 经度
-    pub generationtime_ms: f64, // 生成时间（毫秒）
-    pub utc_offset_seconds: i32, // UTC时区偏移（秒）
-    pub timezone: String,       // 时区名称
+    pub latitude: f64,                 // 纬度
+    pub longitude: f64,                // 经度
+    pub generationtime_ms: f64,        // 生成时间（毫秒）
+    pub utc_offset_seconds: i32,       // UTC时区偏移（秒）
+    pub timezone: String,              // 时区名称
     pub timezone_abbreviation: String, // 时区缩写
-    pub elevation: f64,         // 海拔
-    pub current_units: CurrentUnits, // 当前天气单位
-    pub current: Current,       // 当前天气数据
-    pub hourly_units: HourlyUnits, // 每小时天气单位
-    pub hourly: Hourly,        // 每小时天气数据
+    pub elevation: f64,                // 海拔
+    pub current_units: CurrentUnits,   // 当前天气单位
+    pub current: Current,              // 当前天气数据
+    pub hourly_units: HourlyUnits,     // 每小时天气单位
+    pub hourly: Hourly,                // 每小时天气数据
 }
 
 // CurrentUnits 结构体定义当前天气数据的单位
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CurrentUnits {
-    pub time: String,          // 时间单位
-    pub interval: String,      // 时间间隔单位
+    pub time: String,           // 时间单位
+    pub interval: String,       // 时间间隔单位
     pub temperature_2m: String, // 2米高度温度单位
     pub wind_speed_10m: String, // 10米高度风速单位
 }
@@ -122,28 +123,28 @@ pub struct CurrentUnits {
 // Current 结构体存储当前天气数据
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Current {
-    pub time: String,          // 当前时间
-    pub interval: i32,         // 时间间隔
-    pub temperature_2m: f64,   // 2米高度温度值
-    pub wind_speed_10m: f64,   // 10米高度风速值
+    pub time: String,        // 当前时间
+    pub interval: i32,       // 时间间隔
+    pub temperature_2m: f64, // 2米高度温度值
+    pub wind_speed_10m: f64, // 10米高度风速值
 }
 
 // HourlyUnits 结构体定义每小时天气数据的单位
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HourlyUnits {
-    pub time: String,          // 时间单位
-    pub temperature_2m: String, // 2米高度温度单位
+    pub time: String,                 // 时间单位
+    pub temperature_2m: String,       // 2米高度温度单位
     pub relative_humidity_2m: String, // 2米高度相对湿度单位
-    pub wind_speed_10m: String, // 10米高度风速单位
+    pub wind_speed_10m: String,       // 10米高度风速单位
 }
 
 // Hourly 结构体存储每小时天气数据
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Hourly {
-    pub time: Vec<String>,     // 时间序列
-    pub temperature_2m: Vec<f64>, // 2米高度温度序列
+    pub time: Vec<String>,              // 时间序列
+    pub temperature_2m: Vec<f64>,       // 2米高度温度序列
     pub relative_humidity_2m: Vec<i32>, // 2米高度相对湿度序列
-    pub wind_speed_10m: Vec<f64>, // 10米高度风速序列
+    pub wind_speed_10m: Vec<f64>,       // 10米高度风速序列
 }
 
 // 获取天气数据的函数
