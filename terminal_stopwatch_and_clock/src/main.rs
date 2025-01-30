@@ -1,11 +1,11 @@
 // 引入必要的库
-use chrono::{offset::Utc, DateTime, FixedOffset, TimeZone};
+use chrono::{offset::Utc, FixedOffset, TimeZone};
 use crossterm::event::{poll, read, Event, KeyCode, KeyEventKind};
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     widgets::{Block, Borders, Paragraph},
-    Terminal,
+    Frame, Terminal,
 };
 use std::{io::stdout, thread::sleep, time::Duration, time::Instant};
 
@@ -86,6 +86,40 @@ fn utc_pretty() -> String {
     format!("{london_time}\n{beijing_time} Bei Jing")
 }
 
+fn ui(f: &mut Frame, stopwatch: &Stopwatch) {
+    // First split into 2 rows (60% and 40%)
+    let main_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+        .split(f.area());
+
+    // Split the first row into 2 equal columns
+    let top_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(main_chunks[0]);
+
+    // top_chunks[0] - top left
+    // top_chunks[1] - top right
+    // main_chunks[1] - bottom row
+    let stopwatch_area = top_chunks[0]; // 左侧区域用于显示秒表
+    let utc_time_area = top_chunks[1]; // 右侧区域用于显示UTC时间
+    let wether_area = main_chunks[1]; // 天气
+
+    // Example usage with blocks:
+    let stopwatch_block = block_with("Stopwatch"); // 创建秒表块
+    let utc_time_block = block_with("Time in London"); // 创建UTC时间块
+    let wether_block = block_with("Wether");
+
+    let stopwatch_text = Paragraph::new(stopwatch.get_time()).block(stopwatch_block); // 创建秒表文本
+    let utc_text = Paragraph::new(utc_pretty()).block(utc_time_block); // 创建UTC时间文本
+    let wether_txt = Paragraph::new("wether_txt").block(wether_block);
+
+    f.render_widget(stopwatch_text, stopwatch_area);
+    f.render_widget(utc_text, utc_time_area);
+    f.render_widget(wether_txt, wether_area);
+}
+
 fn main() -> Result<(), anyhow::Error> {
     let stdout = stdout(); // 获取标准输出
     let backend = CrosstermBackend::new(stdout); // 创建 Crossterm 后端
@@ -105,21 +139,8 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
         }
-        terminal.draw(|f| {
-            // 绘制UI
-            let layout = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-                .split(f.area()); // 将终端区域分割为左右两部分
-            let stopwatch_area = layout[0]; // 左侧区域用于显示秒表
-            let utc_time_area = layout[1]; // 右侧区域用于显示UTC时间
-            let stopwatch_block = block_with("Stopwatch"); // 创建秒表块
-            let utc_time_block = block_with("Time in London"); // 创建UTC时间块
-            let stopwatch_text = Paragraph::new(stopwatch.get_time()).block(stopwatch_block); // 创建秒表文本
-            let utc_text = Paragraph::new(utc_pretty()).block(utc_time_block); // 创建UTC时间文本
-            f.render_widget(stopwatch_text, stopwatch_area); // 渲染秒表文本
-            f.render_widget(utc_text, utc_time_area); // 渲染UTC时间文本
-        })?;
+
+        terminal.draw(|f| ui(f, &stopwatch))?;
         sleep(Duration::from_millis(100)); // 休眠 20ms
         terminal.clear()?; // 清空终端
     }
