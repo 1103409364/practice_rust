@@ -94,78 +94,83 @@ fn utc_pretty() -> String {
     format!("{london_time}\n{beijing_time} Bei Jing")
 }
 
+// WeatherData 结构体用于存储天气数据
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WeatherData {
-    pub latitude: f64,
-    pub longitude: f64,
-    pub generationtime_ms: f64,
-    pub utc_offset_seconds: i32,
-    pub timezone: String,
-    pub timezone_abbreviation: String,
-    pub elevation: f64,
-    pub current_units: CurrentUnits,
-    pub current: Current,
-    pub hourly_units: HourlyUnits,
-    pub hourly: Hourly,
+    pub latitude: f64,          // 纬度
+    pub longitude: f64,         // 经度
+    pub generationtime_ms: f64, // 生成时间（毫秒）
+    pub utc_offset_seconds: i32, // UTC时区偏移（秒）
+    pub timezone: String,       // 时区名称
+    pub timezone_abbreviation: String, // 时区缩写
+    pub elevation: f64,         // 海拔
+    pub current_units: CurrentUnits, // 当前天气单位
+    pub current: Current,       // 当前天气数据
+    pub hourly_units: HourlyUnits, // 每小时天气单位
+    pub hourly: Hourly,        // 每小时天气数据
 }
 
+// CurrentUnits 结构体定义当前天气数据的单位
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CurrentUnits {
-    pub time: String,
-    pub interval: String,
-    pub temperature_2m: String,
-    pub wind_speed_10m: String,
+    pub time: String,          // 时间单位
+    pub interval: String,      // 时间间隔单位
+    pub temperature_2m: String, // 2米高度温度单位
+    pub wind_speed_10m: String, // 10米高度风速单位
 }
 
+// Current 结构体存储当前天气数据
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Current {
-    pub time: String,
-    pub interval: i32,
-    pub temperature_2m: f64,
-    pub wind_speed_10m: f64,
+    pub time: String,          // 当前时间
+    pub interval: i32,         // 时间间隔
+    pub temperature_2m: f64,   // 2米高度温度值
+    pub wind_speed_10m: f64,   // 10米高度风速值
 }
 
+// HourlyUnits 结构体定义每小时天气数据的单位
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HourlyUnits {
-    pub time: String,
-    pub temperature_2m: String,
-    pub relative_humidity_2m: String,
-    pub wind_speed_10m: String,
+    pub time: String,          // 时间单位
+    pub temperature_2m: String, // 2米高度温度单位
+    pub relative_humidity_2m: String, // 2米高度相对湿度单位
+    pub wind_speed_10m: String, // 10米高度风速单位
 }
 
+// Hourly 结构体存储每小时天气数据
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Hourly {
-    pub time: Vec<String>,
-    pub temperature_2m: Vec<f64>,
-    pub relative_humidity_2m: Vec<i32>,
-    pub wind_speed_10m: Vec<f64>,
+    pub time: Vec<String>,     // 时间序列
+    pub temperature_2m: Vec<f64>, // 2米高度温度序列
+    pub relative_humidity_2m: Vec<i32>, // 2米高度相对湿度序列
+    pub wind_speed_10m: Vec<f64>, // 10米高度风速序列
 }
 
-//
+// 获取天气数据的函数
 fn get_weather() -> Result<WeatherData, anyhow::Error> {
+    // 发送 GET 请求获取长沙市的天气数据（纬度28.23，经度112.94）
     match get("https://api.open-meteo.com/v1/forecast?latitude=28.23&longitude=112.94&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m") {
         Ok(res) => {
-            let text = res.text()?;
-            let data = serde_json::from_str::<WeatherData>(&text)?;
-            // println!("{:?}", data);
+            let text = res.text()?; // 获取响应文本
+            let data = serde_json::from_str::<WeatherData>(&text)?; // 解析 JSON 数据
             return Ok(data);
         }
         Err(e) => return Err(e.into()),
     }
 }
+
 fn ui(
     f: &mut Frame,
     stopwatch: &Stopwatch,
     weather_data: &WeatherData,
-    // Box<dyn std::error::Error> anyhow::Error
 ) -> Result<(), anyhow::Error> {
-    // First split into 2 rows (60% and 40%)
+    // 将界面垂直分割为两部分：上部40%，下部60%
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
         .split(f.area());
 
-    // Split the first row into 2 equal columns
+    // 将上部分水平分割为两个相等的部分
     let top_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -185,9 +190,6 @@ fn ui(
 
     let stopwatch_text = Paragraph::new(stopwatch.get_time()).block(stopwatch_block); // 创建秒表文本
     let utc_text = Paragraph::new(utc_pretty()).block(utc_time_block); // 创建UTC时间文本
-
-    // let weather_text = serde_json::to_string(&weather_data)?;
-    // let wether_txt = Paragraph::new(weather_text).block(wether_block);
 
     // Create data points for the chart
     let data_points: Vec<(f64, f64)> = weather_data.hourly.temperature_2m[0..=23]
