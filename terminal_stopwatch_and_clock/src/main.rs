@@ -281,6 +281,14 @@ fn main() -> Result<(), anyhow::Error> {
         }
 
         sleep(Duration::from_millis(100)); // 休眠 100ms
-        terminal.clear()?; // 清空终端
+
+        //  terminal.draw() 方法会自动处理屏幕的清除和重绘，不需要手动调用 terminal.clear()，terminal.draw() 方法在每次调用时会自动处理以下操作：
+        // - 清除屏幕
+        // - 绘制新的内容
+        // - 刷新屏幕缓冲区
+        // - 额外调用 terminal.clear() 是多余的，而且可能会导致闪烁问题
+        // if redrawing {
+        //     terminal.clear()?; // 清空终端
+        // }
     }
 }
