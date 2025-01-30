@@ -7,7 +7,13 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
     Frame, Terminal,
 };
-use std::{io::stdout, thread::sleep, time::Duration, time::Instant};
+use reqwest::blocking::get; // 使用同步方法，阻塞主线程
+use serde::{Deserialize, Serialize};
+use std::{
+    io::stdout,
+    thread::sleep,
+    time::{Duration, Instant},
+};
 
 // 定义秒表结构体
 struct Stopwatch {
@@ -86,7 +92,71 @@ fn utc_pretty() -> String {
     format!("{london_time}\n{beijing_time} Bei Jing")
 }
 
-fn ui(f: &mut Frame, stopwatch: &Stopwatch) {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WeatherData {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub generationtime_ms: f64,
+    pub utc_offset_seconds: i32,
+    pub timezone: String,
+    pub timezone_abbreviation: String,
+    pub elevation: f64,
+    pub current_units: CurrentUnits,
+    pub current: Current,
+    pub hourly_units: HourlyUnits,
+    pub hourly: Hourly,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CurrentUnits {
+    pub time: String,
+    pub interval: String,
+    pub temperature_2m: String,
+    pub wind_speed_10m: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Current {
+    pub time: String,
+    pub interval: i32,
+    pub temperature_2m: f64,
+    pub wind_speed_10m: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HourlyUnits {
+    pub time: String,
+    pub temperature_2m: String,
+    pub relative_humidity_2m: String,
+    pub wind_speed_10m: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Hourly {
+    pub time: Vec<String>,
+    pub temperature_2m: Vec<f64>,
+    pub relative_humidity_2m: Vec<i32>,
+    pub wind_speed_10m: Vec<f64>,
+}
+
+//
+fn get_weather() -> Result<WeatherData, anyhow::Error> {
+    match get("https://api.open-meteo.com/v1/forecast?latitude=28.23&longitude=112.94&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m") {
+        Ok(res) => {
+            let text = res.text()?;
+            let data = serde_json::from_str::<WeatherData>(&text)?;
+            // println!("{:?}", data);
+            return Ok(data);
+        }
+        Err(error) => return Err(error.into()),
+    }
+}
+fn ui(
+    f: &mut Frame,
+    stopwatch: &Stopwatch,
+    weather_data: &WeatherData,
+    // Box<dyn std::error::Error> anyhow::Error
+) -> Result<(), anyhow::Error> {
     // First split into 2 rows (60% and 40%)
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -113,11 +183,13 @@ fn ui(f: &mut Frame, stopwatch: &Stopwatch) {
 
     let stopwatch_text = Paragraph::new(stopwatch.get_time()).block(stopwatch_block); // 创建秒表文本
     let utc_text = Paragraph::new(utc_pretty()).block(utc_time_block); // 创建UTC时间文本
-    let wether_txt = Paragraph::new("wether_txt").block(wether_block);
+    let weather_text = serde_json::to_string(&weather_data)?;
+    let wether_txt = Paragraph::new(weather_text).block(wether_block);
 
     f.render_widget(stopwatch_text, stopwatch_area);
     f.render_widget(utc_text, utc_time_area);
     f.render_widget(wether_txt, wether_area);
+    Ok(())
 }
 
 fn main() -> Result<(), anyhow::Error> {
@@ -125,6 +197,8 @@ fn main() -> Result<(), anyhow::Error> {
     let backend = CrosstermBackend::new(stdout); // 创建 Crossterm 后端
     let mut terminal = Terminal::new(backend)?; // 创建终端
     let mut stopwatch = Stopwatch::new(); // 创建秒表实例
+    let weather_data = get_weather()?;
+
     loop {
         // 循环处理事件和绘制UI
         // poll 函数在这里用于【非阻塞】地检查是否有键盘事件发生。crossterm 库的 read 函数是阻塞的，如果没有事件发生，它会一直等待。为了避免程序在等待事件时卡住，poll 函数先检查是否有事件，如果有，read 函数才会读取事件。这样可以保证程序在没有事件时也能继续执行其他操作，例如更新UI。
@@ -140,8 +214,15 @@ fn main() -> Result<(), anyhow::Error> {
             }
         }
 
-        terminal.draw(|f| ui(f, &stopwatch))?;
-        sleep(Duration::from_millis(100)); // 休眠 20ms
+        terminal.draw(|f| {
+            match ui(f, &stopwatch, &weather_data) {
+                Ok(d) => d,
+                Err(e) => {
+                    println!("{e:?}");
+                }
+            };
+        })?;
+        sleep(Duration::from_millis(1000)); // 休眠 20ms
         terminal.clear()?; // 清空终端
     }
 }
