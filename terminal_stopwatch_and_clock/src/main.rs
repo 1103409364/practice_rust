@@ -5,7 +5,8 @@ use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     style::{Style, Stylize},
-    widgets::{Axis, Block, Borders, Chart, Dataset, Paragraph},
+    symbols,
+    widgets::{Axis, Block, Borders, Chart, Dataset, GraphType, Paragraph},
     Frame, Terminal,
 };
 use reqwest::blocking::get; // 使用同步方法，阻塞主线程
@@ -189,16 +190,22 @@ fn ui(
     // let wether_txt = Paragraph::new(weather_text).block(wether_block);
 
     // Create data points for the chart
-    let data_points: Vec<(f64, f64)> = weather_data.hourly.temperature_2m[0..24]
+    let data_points: Vec<(f64, f64)> = weather_data.hourly.temperature_2m[0..23]
         .iter()
         .enumerate()
         .map(|(i, temp)| (i as f64, *temp))
         .collect();
 
     // Create the dataset for the temperature
+    // let datasets = vec![Dataset::default()
+    //     .name("Temperature (°C)")
+    //     .marker(ratatui::symbols::Marker::Dot)
+    //     .data(&data_points)];
     let datasets = vec![Dataset::default()
         .name("Temperature (°C)")
-        .marker(ratatui::symbols::Marker::Dot)
+        .marker(symbols::Marker::Braille)
+        .graph_type(GraphType::Line)
+        .style(Style::default().magenta())
         .data(&data_points)];
 
     // Create the X axis and define its properties
