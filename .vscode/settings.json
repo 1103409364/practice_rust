@@ -2,7 +2,9 @@
   "rust-analyzer.showUnlinkedFileNotification": false,
   "editor.tabSize": 4,
   "cSpell.words": [
+    "chrono",
     "Colour",
-    "crossterm"
+    "crossterm",
+    "ratatui"
   ]
 }
