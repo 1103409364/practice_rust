@@ -243,30 +243,40 @@ fn main() -> Result<(), anyhow::Error> {
     let mut terminal = Terminal::new(backend)?; // 创建终端
     let mut stopwatch = Stopwatch::new(); // 创建秒表实例
     let weather_data = get_weather()?;
-
+    let mut redrawing = true;
     loop {
-        // 循环处理事件和绘制UI
+        // 循环处理事件和绘制 UI
         // poll 函数在这里用于【非阻塞】地检查是否有键盘事件发生。crossterm 库的 read 函数是阻塞的，如果没有事件发生，它会一直等待。为了避免程序在等待事件时卡住，poll 函数先检查是否有事件，如果有，read 函数才会读取事件。这样可以保证程序在没有事件时也能继续执行其他操作，例如更新UI。
         if poll(Duration::from_millis(0))? {
             // poll 函数检查是否有事件发生，参数为超时时间，(0) 表示超时时间为 0 毫秒，即立即返回。
-            // 检查是否有事件发生
-            if let Event::Key(key_event) = read()? {
-                // 读取事件
-                if let (KeyCode::Enter, KeyEventKind::Press) = (key_event.code, key_event.kind) {
-                    // 如果是回车键按下，切换秒表状态
-                    stopwatch.next_state();
+            // 读取事件
+            match read() {
+                Ok(Event::FocusGained) => {
+                    redrawing = true;
                 }
+                Ok(Event::FocusLost) => {
+                    redrawing = false;
+                }
+                Ok(Event::Key(key_event)) => {
+                    if let (KeyCode::Enter, KeyEventKind::Press) = (key_event.code, key_event.kind)
+                    {
+                        stopwatch.next_state(); // 如果是回车键按下，切换秒表状态
+                    }
+                }
+                _ => {}
             }
         }
+        if redrawing {
+            terminal.draw(|f| {
+                match ui(f, &stopwatch, &weather_data) {
+                    Ok(d) => d,
+                    Err(e) => {
+                        println!("{e:?}");
+                    }
+                };
+            })?;
+        }
 
-        terminal.draw(|f| {
-            match ui(f, &stopwatch, &weather_data) {
-                Ok(d) => d,
-                Err(e) => {
-                    println!("{e:?}");
-                }
-            };
-        })?;
         sleep(Duration::from_millis(100)); // 休眠 100ms
         terminal.clear()?; // 清空终端
     }
