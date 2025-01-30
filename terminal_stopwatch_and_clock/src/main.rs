@@ -4,7 +4,8 @@ use crossterm::event::{poll, read, Event, KeyCode, KeyEventKind};
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
-    widgets::{Block, Borders, Paragraph},
+    style::{Style, Stylize},
+    widgets::{Axis, Block, Borders, Chart, Dataset, Paragraph},
     Frame, Terminal,
 };
 use reqwest::blocking::get; // 使用同步方法，阻塞主线程
@@ -148,7 +149,7 @@ fn get_weather() -> Result<WeatherData, anyhow::Error> {
             // println!("{:?}", data);
             return Ok(data);
         }
-        Err(error) => return Err(error.into()),
+        Err(e) => return Err(e.into()),
     }
 }
 fn ui(
@@ -160,7 +161,7 @@ fn ui(
     // First split into 2 rows (60% and 40%)
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
         .split(f.area());
 
     // Split the first row into 2 equal columns
@@ -183,12 +184,47 @@ fn ui(
 
     let stopwatch_text = Paragraph::new(stopwatch.get_time()).block(stopwatch_block); // 创建秒表文本
     let utc_text = Paragraph::new(utc_pretty()).block(utc_time_block); // 创建UTC时间文本
-    let weather_text = serde_json::to_string(&weather_data)?;
-    let wether_txt = Paragraph::new(weather_text).block(wether_block);
 
+    // let weather_text = serde_json::to_string(&weather_data)?;
+    // let wether_txt = Paragraph::new(weather_text).block(wether_block);
+
+    // Create data points for the chart
+    let data_points: Vec<(f64, f64)> = weather_data.hourly.temperature_2m[0..24]
+        .iter()
+        .enumerate()
+        .map(|(i, temp)| (i as f64, *temp))
+        .collect();
+
+    // Create the dataset for the temperature
+    let datasets = vec![Dataset::default()
+        .name("Temperature (°C)")
+        .marker(ratatui::symbols::Marker::Dot)
+        .data(&data_points)];
+
+    // Create the X axis and define its properties
+    let x_axis = Axis::default()
+        .title("Time (hours)".red())
+        .style(Style::default().white())
+        .bounds([0.0, 23.0])
+        .labels((0..=23).map(|i| format!("{i:0>2}:00")).collect::<Vec<_>>());
+
+    // Create the Y axis and define its properties
+    let y_axis = Axis::default()
+        .title("Temperature".red())
+        .style(Style::default().white())
+        .bounds([0.0, 50.0])
+        .labels((0..=4).map(|i| (i * 10).to_string()).collect::<Vec<_>>());
+
+    // Create the chart widget
+    let wether_chart = Chart::new(datasets)
+        .block(wether_block)
+        .x_axis(x_axis)
+        .y_axis(y_axis);
+
+    // Render all widgets
     f.render_widget(stopwatch_text, stopwatch_area);
     f.render_widget(utc_text, utc_time_area);
-    f.render_widget(wether_txt, wether_area);
+    f.render_widget(wether_chart, wether_area);
     Ok(())
 }
 
@@ -222,7 +258,7 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             };
         })?;
-        sleep(Duration::from_millis(1000)); // 休眠 20ms
+        sleep(Duration::from_millis(100)); // 休眠 100ms
         terminal.clear()?; // 清空终端
     }
 }
