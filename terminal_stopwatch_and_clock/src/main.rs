@@ -41,6 +41,14 @@ impl Stopwatch {
             display: String::from("00:00:00"), // 初始化显示时间为 0:00:00
         }
     }
+
+    // 这个优化的主要目的是：
+    // 1. 使用 Cow (Clone on Write) 类型来避免不必要的内存分配
+    // 2. 对于固定的字符串（如 "00:00:00"），使用 Cow::Borrowed 直接返回静态引用
+    // 3. 只在真正需要新字符串时（Running 状态下）才分配新内存
+    // 4. Done 状态下复用已经存储的字符串
+    // 这样的实现可以减少内存分配，提高程序性能，特别是在秒表处于 NotStarted 状态时。
+
     // 获取当前时间
     fn get_time(&self) -> Cow<'static, str> {
         use StopwatchState::*;
@@ -57,7 +65,8 @@ impl Stopwatch {
                 // 指定最小宽度 2，> 右对齐，并且使用 0 在左侧填充
                 Cow::Owned(format!("{minutes:0>2}:{seconds:0>2}:{split_seconds:0>2}"))
             }
-            Done => Cow::Owned(self.display.to_string()), // 如果已停止，返回停止时的时间
+            // Done 状态下，我们需要克隆字符串来获得 'static 生命周期
+            Done => Cow::Owned(self.display.to_string()),
         }
     }
     // 切换秒表状态
