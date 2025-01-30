@@ -5,6 +5,7 @@
     "chrono",
     "Colour",
     "crossterm",
-    "ratatui"
+    "ratatui",
+    "reqwest"
   ]
 }
