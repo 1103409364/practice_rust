@@ -22,14 +22,14 @@ use std::{
 struct Stopwatch {
     now: Instant,          // 记录开始时间
     state: StopwatchState, // 记录秒表状态
-    display: String,       // 记录显示的时间
+    display: String,
 }
 
 // 定义秒表状态枚举
 enum StopwatchState {
     NotStarted, // 秒表未启动
     Running,    // 秒表正在运行
-    Done,       // 秒表已停止
+    Done,       // 秒表已停止，保存停止时的时间显示
 }
 
 impl Stopwatch {
@@ -38,7 +38,7 @@ impl Stopwatch {
         Self {
             now: Instant::now(),               // 初始化开始时间为当前时间
             state: StopwatchState::NotStarted, // 初始化状态为未启动
-            display: String::from("00:00:00"), // 初始化显示时间为 0:00:00
+            display: "".to_owned(),
         }
     }
 
@@ -52,8 +52,8 @@ impl Stopwatch {
     // 获取当前时间
     fn get_time(&self) -> Cow<'static, str> {
         use StopwatchState::*;
-        match self.state {
-            NotStarted => Cow::Borrowed("00:00:00"),
+        match &self.state {
+            NotStarted => Cow::Borrowed("00:00:00"), // 多次执行不会重复分配内存，"00:00:00" 是一个字符串字面量，它被存储在程序的只读数据段中，而不是在堆上动态分配的。
             Running => {
                 // 如果正在运行，计算经过的时间
                 let mut elapsed = self.now.elapsed().as_millis();
@@ -65,26 +65,24 @@ impl Stopwatch {
                 // 指定最小宽度 2，> 右对齐，并且使用 0 在左侧填充
                 Cow::Owned(format!("{minutes:0>2}:{seconds:0>2}:{split_seconds:0>2}"))
             }
-            // Done 状态下，我们需要克隆字符串来获得 'static 生命周期
-            Done => Cow::Owned(self.display.to_string()),
+            Done => Cow::Borrowed("00:00:00"), // Cow::Borrowed(&self.display), lifetime may not live long enough
         }
     }
     // 切换秒表状态
     fn next_state(&mut self) {
         use StopwatchState::*;
-        match self.state {
+        self.state = match &self.state {
             NotStarted => {
                 // 如果未启动，设置为运行状态并记录开始时间
                 self.now = Instant::now();
-                self.state = Running;
+                Running
             }
             Running => {
                 // 如果正在运行，设置为停止状态并记录当前时间
-                self.display = self.get_time().into_owned();
-                self.state = Done;
+                Done
             }
-            Done => self.state = NotStarted, // 如果已停止，设置为未启动状态
-        }
+            Done => NotStarted, // 如果已停止，设置为未启动状态
+        };
     }
 }
 // 创建一个带有边框的块
@@ -169,7 +167,7 @@ fn get_weather() -> Result<WeatherData, anyhow::Error> {
     }
 }
 
-fn ui(
+fn draw_ui(
     f: &mut Frame,
     stopwatch: &Stopwatch,
     weather_data: &WeatherData,
@@ -248,7 +246,6 @@ fn ui(
     f.render_widget(wether_chart, wether_area);
     Ok(())
 }
-
 fn main() -> Result<(), anyhow::Error> {
     let stdout = stdout(); // 获取标准输出
     let backend = CrosstermBackend::new(stdout); // 创建 Crossterm 后端
@@ -256,6 +253,7 @@ fn main() -> Result<(), anyhow::Error> {
     let mut stopwatch = Stopwatch::new(); // 创建秒表实例
     let weather_data = get_weather()?;
     let mut redrawing = true;
+    terminal.clear()?; // 清空终端
     loop {
         // 循环处理事件和绘制 UI
         // poll 函数在这里用于【非阻塞】地检查是否有键盘事件发生。crossterm 库的 read 函数是阻塞的，如果没有事件发生，它会一直等待。为了避免程序在等待事件时卡住，poll 函数先检查是否有事件，如果有，read 函数才会读取事件。这样可以保证程序在没有事件时也能继续执行其他操作，例如更新UI。
@@ -280,7 +278,7 @@ fn main() -> Result<(), anyhow::Error> {
         }
         if redrawing {
             terminal.draw(|f| {
-                match ui(f, &stopwatch, &weather_data) {
+                match draw_ui(f, &stopwatch, &weather_data) {
                     Ok(d) => d,
                     Err(e) => {
                         println!("{e:?}");
