@@ -50,7 +50,7 @@ impl Stopwatch {
     // 这样的实现可以减少内存分配，提高程序性能，特别是在秒表处于 NotStarted 状态时。
 
     // 获取当前时间
-    fn get_time(&self) -> Cow<'static, str> {
+    fn get_time(&self) -> Cow<'_, str> {
         use StopwatchState::*;
         match &self.state {
             NotStarted => Cow::Borrowed("00:00:00"), // 多次执行不会重复分配内存，"00:00:00" 是一个字符串字面量，它被存储在程序的只读数据段中，而不是在堆上动态分配的。
@@ -65,7 +65,7 @@ impl Stopwatch {
                 // 指定最小宽度 2，> 右对齐，并且使用 0 在左侧填充
                 Cow::Owned(format!("{minutes:0>2}:{seconds:0>2}:{split_seconds:0>2}"))
             }
-            Done => Cow::Borrowed("00:00:00"), // Cow::Borrowed(&self.display), lifetime may not live long enough
+            Done => Cow::Borrowed(&self.display), // lifetime may not live long enough 'static 改为 '_  解决
         }
     }
     // 切换秒表状态
@@ -79,6 +79,7 @@ impl Stopwatch {
             }
             Running => {
                 // 如果正在运行，设置为停止状态并记录当前时间
+                self.display = self.get_time().to_string();
                 Done
             }
             Done => NotStarted, // 如果已停止，设置为未启动状态
