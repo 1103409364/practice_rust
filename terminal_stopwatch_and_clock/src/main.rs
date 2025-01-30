@@ -29,14 +29,14 @@ impl Stopwatch {
         Self {
             now: Instant::now(),               // 初始化开始时间为当前时间
             state: StopwatchState::NotStarted, // 初始化状态为未启动
-            display: String::from("0:00:00"),  // 初始化显示时间为 0:00:00
+            display: String::from("00:00:00"), // 初始化显示时间为 0:00:00
         }
     }
     // 获取当前时间
     fn get_time(&self) -> String {
         use StopwatchState::*;
         match self.state {
-            NotStarted => String::from("0:00:00"), // 如果未启动，返回 0:00:00
+            NotStarted => String::from("00:00:00"), // 如果未启动，返回 0:00:00
             Running => {
                 // 如果正在运行，计算经过的时间
                 let mut elapsed = self.now.elapsed().as_millis();
@@ -45,7 +45,8 @@ impl Stopwatch {
                 let seconds = elapsed / 1000;
                 elapsed -= seconds * 1000;
                 let split_seconds = elapsed / 10;
-                format!("{minutes}:{seconds}:{split_seconds}") // 格式化时间为 分:秒:毫秒
+                // 指定最小宽度 2，> 右对齐，并且使用 0 在左侧填充
+                format!("{minutes:0>2}:{seconds:0>2}:{split_seconds:0>2}") // 格式化时间为 分:秒:毫秒
             }
             Done => self.display.clone(), // 如果已停止，返回停止时的时间
         }
