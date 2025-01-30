@@ -190,19 +190,14 @@ fn ui(
     // let wether_txt = Paragraph::new(weather_text).block(wether_block);
 
     // Create data points for the chart
-    let data_points: Vec<(f64, f64)> = weather_data.hourly.temperature_2m[0..23]
+    let data_points: Vec<(f64, f64)> = weather_data.hourly.temperature_2m[0..=23]
         .iter()
         .enumerate()
         .map(|(i, temp)| (i as f64, *temp))
         .collect();
 
-    // Create the dataset for the temperature
-    // let datasets = vec![Dataset::default()
-    //     .name("Temperature (°C)")
-    //     .marker(ratatui::symbols::Marker::Dot)
-    //     .data(&data_points)];
     let datasets = vec![Dataset::default()
-        .name("Temperature (°C)")
+        .name("(Temperature °C)")
         .marker(symbols::Marker::Braille)
         .graph_type(GraphType::Line)
         .style(Style::default().magenta())
@@ -213,14 +208,21 @@ fn ui(
         .title("Time (hours)".red())
         .style(Style::default().white())
         .bounds([0.0, 23.0])
-        .labels((0..=23).map(|i| format!("{i:0>2}:00")).collect::<Vec<_>>());
+        .labels(weather_data.hourly.time[0..=23].iter().map(|s| &s[11..]));
+    // .labels((0..=23).map(|i| format!("{i:0>2}:00")));
 
     // Create the Y axis and define its properties
     let y_axis = Axis::default()
-        .title("Temperature".red())
+        .title(
+            format!(
+                "Temperature latitude: {} longitude: {}",
+                weather_data.latitude, weather_data.longitude,
+            )
+            .red(),
+        )
         .style(Style::default().white())
         .bounds([0.0, 50.0])
-        .labels((0..=4).map(|i| (i * 10).to_string()).collect::<Vec<_>>());
+        .labels((0..=4).map(|i| ((i * 10).to_string())));
 
     // Create the chart widget
     let wether_chart = Chart::new(datasets)
