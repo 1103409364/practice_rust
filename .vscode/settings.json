@@ -5,6 +5,7 @@
     "chrono",
     "Colour",
     "crossterm",
+    "fastrand",
     "generationtime",
     "ratatui",
     "reqwest"
