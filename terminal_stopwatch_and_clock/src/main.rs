@@ -1,6 +1,8 @@
-// 引入必要的库
+// 引入 chrono 库，用于处理时间和日期
 use chrono::{offset::Utc, FixedOffset, TimeZone};
+// 引入 crossterm 库，用于处理终端事件
 use crossterm::event::{poll, read, Event, KeyCode, KeyEventKind};
+// 引入 ratatui 库，用于构建终端用户界面
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
@@ -9,8 +11,11 @@ use ratatui::{
     widgets::{Axis, Block, Borders, Chart, Dataset, GraphType, Paragraph},
     Frame, Terminal,
 };
+// 引入 reqwest 库，用于发送 HTTP 请求
 use reqwest::blocking::get; // 使用同步方法，阻塞主线程
+                            // 引入 serde 库，用于序列化和反序列化数据
 use serde::{Deserialize, Serialize};
+// 引入 std 库，用于标准输入输出、线程和时间操作
 use std::{
     borrow::Cow,
     io::stdout,
@@ -18,14 +23,14 @@ use std::{
     time::{Duration, Instant},
 };
 
-// 定义秒表结构体
+// 定义秒表结构体 用于存储秒表的状态和时间
 struct Stopwatch {
     now: Instant,          // 记录开始时间
     state: StopwatchState, // 记录秒表状态
     display: String,
 }
 
-// 定义秒表状态枚举
+// 定义秒表状态枚举 用于表示秒表的不同状态
 enum StopwatchState {
     NotStarted, // 秒表未启动
     Running,    // 秒表正在运行
@@ -33,7 +38,7 @@ enum StopwatchState {
 }
 
 impl Stopwatch {
-    // 创建一个新的秒表实例
+    // 创建一个新的秒表实例，初始化秒表的状态和时间
     fn new() -> Self {
         Self {
             now: Instant::now(),               // 初始化开始时间为当前时间
@@ -49,7 +54,7 @@ impl Stopwatch {
     // 4. Done 状态下复用已经存储的字符串
     // 这样的实现可以减少内存分配，提高程序性能，特别是在秒表处于 NotStarted 状态时。
 
-    // 获取当前时间
+    // 获取当前时间，根据秒表状态返回不同的时间字符串
     fn get_time(&self) -> Cow<'_, str> {
         use StopwatchState::*;
         match &self.state {
@@ -68,7 +73,7 @@ impl Stopwatch {
             Done => Cow::Borrowed(&self.display), // lifetime may not live long enough 'static 改为 '_  解决
         }
     }
-    // 切换秒表状态
+    // 切换秒表状态，根据当前状态切换到下一个状态
     fn next_state(&mut self) {
         use StopwatchState::*;
         self.state = match &self.state {
@@ -86,11 +91,11 @@ impl Stopwatch {
         };
     }
 }
-// 创建一个带有边框的块
+// 创建一个带有边框的块，用于在终端中显示带有标题和边框的块
 fn block_with(input: &str) -> Block {
     Block::default().title(input).borders(Borders::ALL)
 }
-// 获取当前UTC时间并格式化为字符串
+// 获取当前UTC时间并格式化为字符串，返回格式化后的UTC时间和北京时间
 fn utc_pretty() -> String {
     // east_opt 参数毫秒 east 已经废弃
     let beijing_offset = FixedOffset::east_opt(8 * 3600).expect("FixedOffset::east out of bounds");
@@ -103,7 +108,7 @@ fn utc_pretty() -> String {
     format!("{london_time}\n{beijing_time} Bei Jing")
 }
 
-// WeatherData 结构体用于存储天气数据
+// WeatherData 结构体用于存储天气数据，从API获取的天气数据
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WeatherData {
     pub latitude: f64,                 // 纬度
@@ -119,7 +124,7 @@ pub struct WeatherData {
     pub hourly: Hourly,                // 每小时天气数据
 }
 
-// CurrentUnits 结构体定义当前天气数据的单位
+// CurrentUnits 结构体定义当前天气数据的单位，存储当前天气数据的单位信息
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CurrentUnits {
     pub time: String,           // 时间单位
@@ -128,7 +133,7 @@ pub struct CurrentUnits {
     pub wind_speed_10m: String, // 10米高度风速单位
 }
 
-// Current 结构体存储当前天气数据
+// Current 结构体存储当前天气数据，存储当前天气数据的值
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Current {
     pub time: String,        // 当前时间
@@ -137,7 +142,7 @@ pub struct Current {
     pub wind_speed_10m: f64, // 10米高度风速值
 }
 
-// HourlyUnits 结构体定义每小时天气数据的单位
+// HourlyUnits 结构体定义每小时天气数据的单位，存储每小时天气数据的单位信息
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HourlyUnits {
     pub time: String,                 // 时间单位
@@ -146,7 +151,7 @@ pub struct HourlyUnits {
     pub wind_speed_10m: String,       // 10米高度风速单位
 }
 
-// Hourly 结构体存储每小时天气数据
+// Hourly 结构体存储每小时天气数据，存储每小时天气数据的值
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Hourly {
     pub time: Vec<String>,              // 时间序列
@@ -155,7 +160,7 @@ pub struct Hourly {
     pub wind_speed_10m: Vec<f64>,       // 10米高度风速序列
 }
 
-// 获取天气数据的函数
+// 获取天气数据的函数，从API获取天气数据
 fn get_weather() -> Result<WeatherData, anyhow::Error> {
     // 发送 GET 请求获取长沙市的天气数据（纬度28.23，经度112.94）
     match get("https://api.open-meteo.com/v1/forecast?latitude=28.23&longitude=112.94&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m") {
@@ -168,6 +173,7 @@ fn get_weather() -> Result<WeatherData, anyhow::Error> {
     }
 }
 
+// 绘制用户界面的函数，使用 ratatui 库绘制终端界面
 fn draw_ui(
     f: &mut Frame,
     stopwatch: &Stopwatch,
@@ -247,6 +253,8 @@ fn draw_ui(
     f.render_widget(wether_chart, wether_area);
     Ok(())
 }
+
+// 程序入口
 fn main() -> Result<(), anyhow::Error> {
     let stdout = stdout(); // 获取标准输出
     let backend = CrosstermBackend::new(stdout); // 创建 Crossterm 后端
