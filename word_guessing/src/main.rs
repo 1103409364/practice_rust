@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use axum::{extract::Path, extract::State, routing::get, Router}; //  http::StatusCode, 导入必要的 axum 模块
+use axum::{extract::Path, extract::State, response::IntoResponse, routing::get, Router}; //  http::StatusCode, 导入必要的 axum 模块
 use std::sync::{Arc, Mutex};
 
 // 定义一个包含随机单词的常量数组
@@ -23,7 +23,7 @@ enum Guess {
 async fn get_res_from_state(
     Path(guess): Path<String>,                   // 从路径中提取猜测
     State(game_app): State<Arc<Mutex<GameApp>>>, // 从状态中提取游戏应用
-) -> String {
+) -> impl IntoResponse {
     let mut game_app = game_app.lock().unwrap();
     game_app.take_guess(guess) // 调用 take_guess 方法处理猜测
 }
