@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use axum::{extract::Path, extract::State, routing::get, Router}; //  http::StatusCode, 导入必要的 axum 模块
 use std::sync::{Arc, Mutex};
 
@@ -141,6 +143,7 @@ async fn main() {
         .with_state(game_app); // 将游戏状态添加到路由
 
     // 使用 hyper 运行应用，监听 8080 端口
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
