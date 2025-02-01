@@ -1,13 +1,18 @@
 use std::net::SocketAddr;
 
-use axum::{extract::Path, extract::State, response::IntoResponse, routing::get, Router}; //  http::StatusCode, 导入必要的 axum 模块
-use std::sync::{Arc, Mutex};
+use axum::{extract::Path, response::IntoResponse, routing::get, Router}; //  http::StatusCode, 导入必要的 axum 模块
+use serde::{Deserialize, Serialize};
+// use std::sync::{Arc, Mutex};
+use time::Duration;
+use tower_sessions::{Expiry, MemoryStore, Session, SessionManagerLayer};
+
+const GAME_GUESS_KEY: &str = "/game/guess";
 
 // 定义一个包含随机单词的常量数组
 const RANDOM_WORDS: [&str; 6] = ["MB", "Windy", "Gomes", "Johnny", "Seoul", "Interesting"];
 
 // 定义游戏状态结构体
-#[derive(Debug)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 struct GameApp {
     current_word: String,     // 当前要猜测的单词
     right_guesses: Vec<char>, // 正确猜测的字母
@@ -21,11 +26,28 @@ enum Guess {
 }
 // 从状态中获取游戏结果的异步函数
 async fn get_res_from_state(
-    Path(guess): Path<String>,                   // 从路径中提取猜测
-    State(game_app): State<Arc<Mutex<GameApp>>>, // 从状态中提取游戏应用
+    Path(guess): Path<String>,
+    session: Session, // 从路径中提取猜测
 ) -> impl IntoResponse {
-    let mut game_app = game_app.lock().unwrap();
-    game_app.take_guess(guess) // 调用 take_guess 方法处理猜测
+    if let Some(mut game_app) = session
+        .get::<GameApp>(GAME_GUESS_KEY)
+        .await
+        .unwrap_or_default()
+    {
+        let res = game_app.take_guess(guess);
+        session.insert(GAME_GUESS_KEY, game_app).await.unwrap();
+        res
+    } else {
+        let mut game_app = GameApp {
+            current_word: String::new(), // 初始化当前单词
+            right_guesses: vec![],       // 初始化正确猜测的字母列表
+            wrong_guesses: vec![],       // 初始化错误猜测的字母列表
+        };
+        game_app.restart();
+        let res = game_app.take_guess(guess);
+        session.insert(GAME_GUESS_KEY, game_app).await.unwrap();
+        res
+    }
 }
 
 impl GameApp {
@@ -128,19 +150,18 @@ async fn double(Path(input): Path<String>) -> String {
 // 主函数
 #[tokio::main]
 async fn main() {
-    let game_app = Arc::new(Mutex::new(GameApp {
-        current_word: String::new(), // 初始化当前单词
-        right_guesses: vec![],       // 初始化正确猜测的字母列表
-        wrong_guesses: vec![],       // 初始化错误猜测的字母列表
-    }));
-    game_app.lock().unwrap().restart(); // 启动游戏
-                                        // 构建应用路由
+    let session_store = MemoryStore::default();
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(false)
+        .with_expiry(Expiry::OnInactivity(Duration::seconds(1000 * 60)));
+
+    // 构建应用路由
     let app = Router::new()
         // `GET /` 路由到 `root` 函数
         .route("/", get(root))
         .route("/game/{guess}", get(get_res_from_state)) // `GET /game/{guess}` 路由到 `get_res_from_state` 函数
         .route("/double/{number}", get(double)) // `GET /double/{number}` 路由到 `double` 函数
-        .with_state(game_app); // 将游戏状态添加到路由
+        .layer(session_layer); // 将游戏状态添加到路由
 
     // 使用 hyper 运行应用，监听 8080 端口
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));

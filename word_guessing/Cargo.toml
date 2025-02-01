@@ -6,4 +6,7 @@ edition = "2021"
 [dependencies]
 axum = "0.8.1"
 fastrand = "2.3.0"
+serde = "1.0.217"
+time = "0.3.37"
 tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
+tower-sessions = "0.14.0"
