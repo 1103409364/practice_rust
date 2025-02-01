@@ -1,5 +1,9 @@
+use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
+use axum::extract::State;
 use axum::{extract::Path, routing::get, Router}; //  http::StatusCode, 导入必要的 axum 模块
 use serde::{Deserialize, Serialize};
 use time::Duration;
@@ -37,8 +41,24 @@ enum Guess {
     AlreadyGuessed, // 已经猜过
 }
 
+#[derive(Clone)]
+struct AppState {
+    game_locks: Arc<Mutex<HashMap<String, ()>>>, // 用户会话锁映射
+}
+
 // 从状态中获取游戏结果的异步函数 Path 路径解析器
-async fn get_res_from_state(Path(guess): Path<String>, session: Session) -> Result<String, String> {
+async fn get_res_from_state(
+    State(state): State<AppState>,
+    Path(guess): Path<String>,
+    session: Session,
+) -> Result<String, String> {
+    let session_id = session.id().expect("Session ID must exist").to_string();
+
+    // 使用 session_id 获取或创建用户特定的锁
+    let mut locks = state.game_locks.lock().await;
+    locks.entry(session_id).or_default();
+
+    // 现在这个会话的所有操作都是原子的
     let mut game_app = match session.get::<GameApp>(GAME_GUESS_KEY).await {
         Ok(Some(app)) => app,
         Ok(None) => GameApp::default(),
@@ -159,13 +179,18 @@ async fn main() {
         .with_secure(false)
         .with_expiry(Expiry::OnInactivity(Duration::seconds(1000 * 60)));
 
+    let app_state = AppState {
+        game_locks: Arc::new(Mutex::new(HashMap::new())),
+    };
+
     // 构建应用路由
     let app = Router::new()
         // `GET /` 路由到 `root` 函数
         .route("/", get(root))
         .route("/game/{guess}", get(get_res_from_state)) // `GET /game/{guess}` 路由到 `get_res_from_state` 函数
         .route("/double/{number}", get(double)) // `GET /double/{number}` 路由到 `double` 函数
-        .layer(session_layer); // 将游戏状态添加到路由
+        .layer(session_layer)
+        .with_state(app_state);
 
     // 使用 hyper 运行应用，监听 8080 端口
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
