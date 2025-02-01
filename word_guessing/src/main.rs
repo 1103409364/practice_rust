@@ -78,7 +78,6 @@ impl GameApp {
                     }
                     Guess::Wrong => {
                         self.wrong_guesses.push(the_guess); // 将错误猜测的字母添加到 wrong_guesses
-                        println!("{self:?}");
                         output.push_str(&format!("Nope, it doesn't contain a {the_guess}!\n"));
                         // 提示猜测错误
                     }
