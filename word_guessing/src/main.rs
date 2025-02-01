@@ -1,8 +1,7 @@
 use std::net::SocketAddr;
 
-use axum::{extract::Path, response::IntoResponse, routing::get, Router}; //  http::StatusCode, 导入必要的 axum 模块
+use axum::{extract::Path, routing::get, Router}; //  http::StatusCode, 导入必要的 axum 模块
 use serde::{Deserialize, Serialize};
-// use std::sync::{Arc, Mutex};
 use time::Duration;
 use tower_sessions::{Expiry, MemoryStore, Session, SessionManagerLayer};
 
@@ -12,42 +11,47 @@ const GAME_GUESS_KEY: &str = "/game/guess";
 const RANDOM_WORDS: [&str; 6] = ["MB", "Windy", "Gomes", "Johnny", "Seoul", "Interesting"];
 
 // 定义游戏状态结构体
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct GameApp {
     current_word: String,     // 当前要猜测的单词
     right_guesses: Vec<char>, // 正确猜测的字母
     wrong_guesses: Vec<char>, // 错误猜测的字母
 }
+// 自定义 Default 自动初始化和启动游戏
+impl Default for GameApp {
+    fn default() -> Self {
+        let mut game = Self {
+            current_word: String::new(),
+            right_guesses: vec![],
+            wrong_guesses: vec![],
+        };
+        game.restart();
+        game
+    }
+}
+
 // 定义猜测结果枚举
 enum Guess {
     Right,          // 猜测正确
     Wrong,          // 猜测错误
     AlreadyGuessed, // 已经猜过
 }
-// 从状态中获取游戏结果的异步函数
-async fn get_res_from_state(
-    Path(guess): Path<String>,
-    session: Session, // 从路径中提取猜测
-) -> impl IntoResponse {
-    if let Some(mut game_app) = session
-        .get::<GameApp>(GAME_GUESS_KEY)
-        .await
-        .unwrap_or_default()
-    {
-        let res = game_app.take_guess(guess);
-        session.insert(GAME_GUESS_KEY, game_app).await.unwrap();
-        res
-    } else {
-        let mut game_app = GameApp {
-            current_word: String::new(), // 初始化当前单词
-            right_guesses: vec![],       // 初始化正确猜测的字母列表
-            wrong_guesses: vec![],       // 初始化错误猜测的字母列表
-        };
-        game_app.restart();
-        let res = game_app.take_guess(guess);
-        session.insert(GAME_GUESS_KEY, game_app).await.unwrap();
-        res
+
+// 从状态中获取游戏结果的异步函数 Path 路径解析器
+async fn get_res_from_state(Path(guess): Path<String>, session: Session) -> Result<String, String> {
+    let mut game_app = match session.get::<GameApp>(GAME_GUESS_KEY).await {
+        Ok(Some(app)) => app,
+        Ok(None) => GameApp::default(),
+        Err(_) => GameApp::default(),
+    };
+
+    let res = game_app.take_guess(guess);
+
+    if let Err(_) = session.insert(GAME_GUESS_KEY, game_app).await {
+        return Ok("Error saving game state, but here's your result: ".to_string() + &res);
     }
+
+    Ok(res)
 }
 
 impl GameApp {
