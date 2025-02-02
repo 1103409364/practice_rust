@@ -13,7 +13,7 @@ struct LaserPointer {
 // Represents the speed of the laser pointer
 #[derive(Clone, Copy, Default)]
 enum Speed {
-    #[default]
+    #[default] // default speed is still
     Still, // laser pointer is not moving
     Slow,      // laser pointer is moving slowly
     Fast,      // laser pointer is moving fast
