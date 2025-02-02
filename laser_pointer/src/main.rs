@@ -1,52 +1,54 @@
-// NothingApp 结构体定义了应用程序的基本状态
+use eframe::egui;
+use egui::{Color32, Pos2, Sense, Vec2};
 #[derive(Default)]
-struct NothingApp {
-    number: i32,  // 计数器值
-    text: String, // 文本编辑区内容
-    code: String, // 代码编辑区内容
+struct LaserPointer {
+    position: Pos2,
 }
-
-impl NothingApp {
-    // 创建并初始化一个新的 NothingApp 实例
+impl LaserPointer {
     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
         Self {
-            number: 0,                                                         // 初始计数器值为0
-            text: String::from("Put some text in here!"),                      // 默认文本
-            code: String::from(r#"fn main() { println!("Hello, world!"); }"#), // 默认代码
+            position: Pos2 { x: 0.0, y: 0.0 },
         }
     }
 }
-
-impl eframe::App for NothingApp {
-    // 更新UI界面的函数
+impl eframe::App for LaserPointer {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            // 增加计数器按钮
-            if ui.button("Counter up").clicked() {
-                self.number += 1
+            let rect = ctx.screen_rect();
+            let screen_size = Vec2 {
+                x: rect.width(),
+                y: rect.height(),
+            };
+            let (response, painter) = ui.allocate_painter(screen_size, Sense::hover());
+            if response.hovered() {
+                let Pos2 { x, y } = self.position;
+                let Pos2 { x: x2, y: y2 } = ctx.pointer_hover_pos().unwrap_or_default();
+                if (x - x2).abs() < 10.0 && (y - y2).abs() < 10.0 {
+                    if fastrand::bool() {
+                        self.position.x += fastrand::f32() * 20.0;
+                    } else {
+                        self.position.x -= fastrand::f32() * 20.0;
+                    }
+                    if fastrand::bool() {
+                        self.position.y += fastrand::f32() * 20.0;
+                    } else {
+                        self.position.y -= fastrand::f32() * 20.0;
+                    }
+                }
             }
-            // 减少计数器按钮
-            if ui.button("Counter down").clicked() {
-                self.number -= 1
-            }
-            // 显示当前计数器值
-            ui.label(format!("The counter is: {}", self.number));
-            // 多行文本编辑区
-            ui.text_edit_multiline(&mut self.text);
-            // 代码编辑器区域
-            ui.code_editor(&mut self.code);
+            self.position.x += 0.5;
+            self.position.y += 0.5;
+            let radius = 10.0;
+            painter.circle_filled(self.position, radius, Color32::RED);
         });
     }
 }
 
-// 主函数 - 程序入口点
 fn main() {
-    // 创建默认的原生窗口配置
     let native_options = eframe::NativeOptions::default();
-    // 运行GUI应用程序
     let _ = eframe::run_native(
-        "My egui App", // 窗口标题
+        "My egui App",
         native_options,
-        Box::new(|cc| Ok(Box::new(NothingApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(LaserPointer::new(cc)))),
     );
 }
