@@ -6,6 +6,8 @@
     "chrono",
     "Colour",
     "crossterm",
+    "eframe",
+    "egui",
     "fastrand",
     "generationtime",
     "Gomes",
