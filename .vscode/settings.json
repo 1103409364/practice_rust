@@ -2,11 +2,13 @@
   "rust-analyzer.showUnlinkedFileNotification": false,
   "editor.tabSize": 4,
   "cSpell.words": [
+    "Bzzt",
     "chrono",
     "Colour",
     "crossterm",
     "fastrand",
     "generationtime",
+    "Gomes",
     "ratatui",
     "reqwest"
   ]
