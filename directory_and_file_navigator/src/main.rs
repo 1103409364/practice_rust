@@ -1,4 +1,4 @@
-use eframe::egui;
+use eframe::egui::{self, FontData, FontDefinitions, FontFamily};
 use egui::{Color32, RichText, TextEdit};
 use std::{
     env::current_dir,
@@ -8,17 +8,48 @@ use std::{
 
 /// 目录浏览应用的主要结构
 struct DirectoryApp {
-    file_content: String,      // 当前打开文件的内容
-    current_dir: PathBuf,      // 当前浏览的目录路径
-    error_message: Option<String>,  // 错误信息，如果有的话
+    file_content: String,          // 当前打开文件的内容
+    current_dir: PathBuf,          // 当前浏览的目录路径
+    error_message: Option<String>, // 错误信息，如果有的话
 }
 
 impl DirectoryApp {
     /// 创建新的应用实例
-    fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+    fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        // 设置字体支持中文字符，字体文件在 /fonts/SmileySans-Oblique.ttf
+        let mut fonts = FontDefinitions::default();
+        // Install my own font (maybe supporting non-latin characters):
+        fonts.font_data.insert(
+            "SmileySans-Oblique".to_owned(),
+            std::sync::Arc::new(
+                // .ttf and .otf supported
+                FontData::from_static(include_bytes!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/assets/fonts/SmileySans-Oblique.otf"
+                ))),
+            ),
+        );
+
+        // Put my font first (highest priority):
+        // fonts
+        //     .families
+        //     .get_mut(&FontFamily::Proportional)
+        //     .unwrap()
+        //     .insert(0, "SmileySans-Oblique".to_owned());
+
+        // Put my font as last fallback for monospace:
+        fonts
+            .families
+            .get_mut(&FontFamily::Monospace)
+            .unwrap()
+            .push("SmileySans-Oblique".to_owned());
+
+        cc.egui_ctx.set_fonts(fonts);
+
+        // 初始化应用实例
         Self {
             file_content: String::new(),
-            current_dir: current_dir().unwrap_or_else(|_| PathBuf::from(".")),  // 默认使用当前目录
+            current_dir: current_dir().unwrap_or_else(|_| PathBuf::from(".")), // 默认使用当前目录
             error_message: None,
         }
     }
@@ -39,8 +70,9 @@ impl DirectoryApp {
         }
     }
 }
-
+// 实现eframe::App，eframe egui库的框架
 impl eframe::App for DirectoryApp {
+    // 更新界面，每一帧都会执行一次
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // 左侧面板：文件浏览器
         egui::SidePanel::left("File browser")
@@ -73,12 +105,12 @@ impl eframe::App for DirectoryApp {
                             // 首先按照类型排序(目录在前)
                             let a_is_dir = a.metadata().map(|m| m.is_dir()).unwrap_or(false);
                             let b_is_dir = b.metadata().map(|m| m.is_dir()).unwrap_or(false);
-                            
+
                             // 如果类型不同，目录排在前面
                             if a_is_dir != b_is_dir {
                                 return b_is_dir.cmp(&a_is_dir);
                             }
-                            
+
                             // 如果类型相同，按名称排序
                             a.file_name().cmp(&b.file_name())
                         });
