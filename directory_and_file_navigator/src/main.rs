@@ -1,8 +1,12 @@
 use eframe::egui::{self, FontData, FontDefinitions, FontFamily};
 use egui::{Color32, RichText, TextEdit};
+use font_kit::{
+    family_name::FamilyName, handle::Handle, properties::Properties, source::SystemSource,
+};
 use std::{
+    collections::HashMap,
     env::current_dir,
-    fs::{read_dir, read_to_string},
+    fs::{read, read_dir, read_to_string},
     path::PathBuf,
 };
 
@@ -17,7 +21,7 @@ impl DirectoryApp {
     /// 创建新的应用实例
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // 设置字体支持中文字符
-        let mut fonts = FontDefinitions::default();
+        let fonts = FontDefinitions::default();
 
         // 1. 加载外部字体文件
         // // Install my own font (maybe supporting non-latin characters):
@@ -46,31 +50,123 @@ impl DirectoryApp {
         //     .unwrap()
         //     .push("SmileySans-Oblique".to_owned());
 
-        // 2. 加载系统字体
-        let font = std::fs::read("c:/Windows/Fonts/msyh.ttc").unwrap();
-        const FONT_SYSTEM_SANS_SERIF: &'static str = "Microsoft YaHei";
+        // // 2. 加载系统字体
+        // let font = std::fs::read("c:/Windows/Fonts/msyh.ttc").unwrap();
+        // const FONT_SYSTEM_SANS_SERIF: &'static str = "Microsoft YaHei";
 
-        fonts.font_data.insert(
-            FONT_SYSTEM_SANS_SERIF.to_owned(),
-            FontData::from_owned(font).into(),
-        );
+        // fonts.font_data.insert(
+        //     FONT_SYSTEM_SANS_SERIF.to_owned(),
+        //     FontData::from_owned(font).into(),
+        // );
 
-        if let Some(vec) = fonts.families.get_mut(&FontFamily::Proportional) {
-            vec.push(FONT_SYSTEM_SANS_SERIF.to_owned());
-        }
+        // if let Some(vec) = fonts.families.get_mut(&FontFamily::Proportional) {
+        //     vec.push(FONT_SYSTEM_SANS_SERIF.to_owned());
+        // }
 
-        if let Some(vec) = fonts.families.get_mut(&FontFamily::Monospace) {
-            vec.push(FONT_SYSTEM_SANS_SERIF.to_owned());
-        }
-
-        cc.egui_ctx.set_fonts(fonts);
+        // if let Some(vec) = fonts.families.get_mut(&FontFamily::Monospace) {
+        //     vec.push(FONT_SYSTEM_SANS_SERIF.to_owned());
+        // }
 
         // 初始化应用实例
-        Self {
+        let app = Self {
             file_content: String::new(),
             current_dir: current_dir().unwrap_or_else(|_| PathBuf::from(".")), // 默认使用当前目录
             error_message: None,
+        };
+
+        // 3. 使用 load_system_fonts 方法加载系统字体
+        cc.egui_ctx.set_fonts(app.load_system_fonts(fonts));
+        app
+    }
+    /// Attempt to load a system font by any of the given `family_names`, returning the first match.
+    fn load_font_family(&self, family_names: &[&str]) -> Option<Vec<u8>> {
+        let system_source = SystemSource::new();
+
+        for &name in family_names {
+            match system_source
+                .select_best_match(&[FamilyName::Title(name.to_string())], &Properties::new())
+            {
+                Ok(h) => match &h {
+                    Handle::Memory { bytes, .. } => {
+                        // debug!("Loaded {name} from memory.");
+                        return Some(bytes.to_vec());
+                    }
+                    Handle::Path { path, .. } => {
+                        // info!("Loaded {name} from path: {:?}", path);
+                        if let Ok(data) = read(path) {
+                            return Some(data);
+                        }
+                    }
+                },
+                Err(e) => {} //error!("Could not load {}: {:?}", name, e),
+            }
         }
+
+        None
+    }
+    /// Load system fonts for the given `fonts` definition, returning a new `FontDefinitions` with the loaded fonts.
+    fn load_system_fonts(&self, mut fonts: FontDefinitions) -> FontDefinitions {
+        let mut fontdb = HashMap::new();
+
+        fontdb.insert(
+            "simplified_chinese",
+            vec![
+                "Microsoft YaHei",
+                "SimSun",
+                "NSimSun",
+                "FangSong",
+                "KaiTi",
+                "Arial",
+                "Heiti SC",
+                "Songti SC",
+                "Noto Sans CJK SC", // Good coverage for Simplified Chinese
+                "Noto Sans SC",
+                "WenQuanYi Zen Hei", // INcludes both Simplified and Traditional Chinese.
+                "Noto Sans SC",
+                "PingFang SC",
+                "Source Han Sans CN",
+            ],
+        );
+
+        // fontdb.insert("korean", vec!["Source Han Sans KR"]);
+
+        // fontdb.insert(
+        //     "arabic_fonts",
+        //     vec![
+        //         "Noto Sans Arabic",
+        //         "Amiri",
+        //         "Lateef",
+        //         "Al Tarikh",
+        //         "Segoe UI",
+        //     ],
+        // );
+
+        // Add more stuff here for better language support
+
+        for (region, font_names) in fontdb {
+            if let Some(font_data) = self.load_font_family(&font_names) {
+                // info!("Inserting font {region}");
+                fonts
+                    .font_data
+                    .insert(region.to_owned(), FontData::from_owned(font_data).into());
+
+                fonts
+                    .families
+                    .get_mut(&FontFamily::Proportional)
+                    .unwrap()
+                    .push(region.to_owned());
+                //
+                if let Some(vec) = fonts.families.get_mut(&FontFamily::Proportional) {
+                    vec.push(region.to_owned());
+                }
+
+                if let Some(vec) = fonts.families.get_mut(&FontFamily::Monospace) {
+                    vec.push(region.to_owned());
+                }
+            }
+        }
+
+        fonts
     }
 
     /// 设置错误信息
