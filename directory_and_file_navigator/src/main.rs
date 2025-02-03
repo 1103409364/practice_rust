@@ -56,7 +56,24 @@ impl eframe::App for DirectoryApp {
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     if let Ok(read_dir) = read_dir(&self.current_dir) {
-                        for entry in read_dir.flatten() {
+                        // 收集并排序目录条目
+                        let mut entries: Vec<_> = read_dir.flatten().collect();
+                        entries.sort_by(|a, b| {
+                            // 首先按照类型排序(目录在前)
+                            let a_is_dir = a.metadata().map(|m| m.is_dir()).unwrap_or(false);
+                            let b_is_dir = b.metadata().map(|m| m.is_dir()).unwrap_or(false);
+                            
+                            // 如果类型不同，目录排在前面
+                            if a_is_dir != b_is_dir {
+                                return b_is_dir.cmp(&a_is_dir);
+                            }
+                            
+                            // 如果类型相同，按名称排序
+                            a.file_name().cmp(&b.file_name())
+                        });
+
+                        // 显示排序后的条目
+                        for entry in entries {
                             if let Ok(metadata) = entry.metadata() {
                                 if let Ok(name) = entry.file_name().into_string() {
                                     let is_dir = metadata.is_dir();
