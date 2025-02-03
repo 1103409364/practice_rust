@@ -11,6 +11,7 @@ use std::{
 };
 
 /// 目录浏览应用的主要结构
+#[derive(Default)]
 struct DirectoryApp {
     file_content: String,          // 当前打开文件的内容
     current_dir: PathBuf,          // 当前浏览的目录路径
@@ -19,6 +20,12 @@ struct DirectoryApp {
 
 impl DirectoryApp {
     /// 创建新的应用实例
+    ///
+    /// # 参数
+    /// * `cc` - eframe创建上下文，用于初始化应用程序
+    ///
+    /// # 返回值
+    /// 返回初始化后的DirectoryApp实例
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // 设置字体支持中文字符
         let fonts = FontDefinitions::default();
@@ -68,18 +75,25 @@ impl DirectoryApp {
         // }
 
         // 初始化应用实例
-        let app = Self {
+        let mut app = Self {
             file_content: String::new(),
             current_dir: current_dir().unwrap_or_else(|_| PathBuf::from(".")), // 默认使用当前目录
             error_message: None,
         };
 
-        // 3. 使用 load_system_fonts 方法加载系统字体
+        // 3. 使用 load_system_fonts 方法加载系统字体 https://github.com/emilk/egui/discussions/1344
         cc.egui_ctx.set_fonts(app.load_system_fonts(fonts));
         app
     }
-    /// Attempt to load a system font by any of the given `family_names`, returning the first match.
-    fn load_font_family(&self, family_names: &[&str]) -> Option<Vec<u8>> {
+
+    /// 尝试从系统中加载指定字体族名称的字体
+    ///
+    /// # 参数
+    /// * `family_names` - 字体族名称列表，按优先级排序
+    ///
+    /// # 返回值
+    /// 返回Option<Vec<u8>>，成功时包含字体数据，失败时返回None
+    fn load_font_family(&mut self, family_names: &[&str]) -> Option<Vec<u8>> {
         let system_source = SystemSource::new();
 
         for &name in family_names {
@@ -88,24 +102,35 @@ impl DirectoryApp {
             {
                 Ok(h) => match &h {
                     Handle::Memory { bytes, .. } => {
-                        // debug!("Loaded {name} from memory.");
+                        println!("Loaded {name} from memory.");
                         return Some(bytes.to_vec());
                     }
                     Handle::Path { path, .. } => {
-                        // info!("Loaded {name} from path: {:?}", path);
+                        println!("Loaded {name} from path: {:?}", path);
                         if let Ok(data) = read(path) {
                             return Some(data);
                         }
                     }
                 },
-                Err(e) => {} //error!("Could not load {}: {:?}", name, e),
+                Err(e) => {
+                    println!("Could not load {}: {:?}", name, e);
+                    self.set_error(e);
+                    return None;
+                }
             }
         }
 
         None
     }
-    /// Load system fonts for the given `fonts` definition, returning a new `FontDefinitions` with the loaded fonts.
-    fn load_system_fonts(&self, mut fonts: FontDefinitions) -> FontDefinitions {
+
+    /// 加载系统字体并配置字体定义
+    ///
+    /// # 参数
+    /// * `fonts` - 初始字体定义
+    ///
+    /// # 返回值
+    /// 返回更新后的FontDefinitions，包含所有加载的系统字体
+    fn load_system_fonts(&mut self, mut fonts: FontDefinitions) -> FontDefinitions {
         let mut fontdb = HashMap::new();
 
         fontdb.insert(
@@ -155,7 +180,7 @@ impl DirectoryApp {
                     .get_mut(&FontFamily::Proportional)
                     .unwrap()
                     .push(region.to_owned());
-                //
+                // 添加字体到字体族列表中
                 if let Some(vec) = fonts.families.get_mut(&FontFamily::Proportional) {
                     vec.push(region.to_owned());
                 }
@@ -169,12 +194,18 @@ impl DirectoryApp {
         fonts
     }
 
-    /// 设置错误信息
+    /// 设置应用程序的错误信息
+    ///
+    /// # 参数
+    /// * `error` - 实现了ToString trait的错误信息
     fn set_error(&mut self, error: impl ToString) {
         self.error_message = Some(error.to_string());
     }
 
-    /// 加载文件内容
+    /// 加载并读取文件内容
+    ///
+    /// # 参数
+    /// * `file_path` - 要加载的文件路径
     fn load_file(&mut self, file_path: PathBuf) {
         match read_to_string(file_path) {
             Ok(content) => {
@@ -185,9 +216,14 @@ impl DirectoryApp {
         }
     }
 }
+
 // 实现eframe::App，eframe egui库的框架
 impl eframe::App for DirectoryApp {
-    // 更新界面，每一帧都会执行一次
+    /// 更新UI界面，这是egui的主要渲染循环
+    ///
+    /// # 参数
+    /// * `ctx` - egui上下文，用于绘制UI元素
+    /// * `_frame` - eframe框架实例，用于控制窗口
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // 左侧面板：文件浏览器
         egui::SidePanel::left("File browser")
@@ -302,6 +338,8 @@ impl eframe::App for DirectoryApp {
 }
 
 /// 程序入口点
+///
+/// 初始化并运行文件浏览器应用程序
 fn main() {
     let native_options = eframe::NativeOptions::default();
     let _ = eframe::run_native(
