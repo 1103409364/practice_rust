@@ -184,6 +184,103 @@ impl DirectoryApp {
             Err(e) => self.set_error(e),
         }
     }
+
+    /// 渲染顶部导航栏
+    fn render_navigation_bar(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            if ui.button(RichText::new("⬆").size(14.0)).clicked()
+                && self.current_dir.parent().is_some()
+            {
+                self.current_dir.pop();
+            }
+
+            egui::ScrollArea::horizontal().show(ui, |ui| {
+                let path_text = self.current_dir.to_string_lossy().to_string();
+                ui.label(RichText::new(path_text).size(11.0));
+            });
+        });
+    }
+
+    /// 渲染文件/目录条目
+    fn render_directory_entry(&mut self, ui: &mut egui::Ui, name: String, is_dir: bool) {
+        let icon = if is_dir { "📁 " } else { "📄 " };
+        let color = if ui.visuals().dark_mode {
+            if is_dir {
+                Color32::from_rgb(110, 166, 255)
+            } else {
+                Color32::from_rgb(255, 210, 120)
+            }
+        } else {
+            if is_dir {
+                Color32::from_rgb(30, 100, 200)
+            } else {
+                Color32::from_rgb(180, 140, 0)
+            }
+        };
+
+        let response = ui.add(
+            egui::Button::new(
+                RichText::new(format!("{}{}", icon, name))
+                    .color(color)
+                    .size(13.0),
+            )
+            .fill(Color32::TRANSPARENT)
+            .min_size(egui::vec2(ui.available_width(), 0.0)),
+        );
+
+        if response.clicked() {
+            if is_dir {
+                self.current_dir.push(name);
+            } else {
+                let file_path = self.current_dir.join(name);
+                self.load_file(file_path);
+            }
+        }
+    }
+
+    /// 渲染文件列表
+    fn render_file_list(&mut self, ui: &mut egui::Ui) {
+        if let Ok(read_dir) = read_dir(&self.current_dir) {
+            let mut entries: Vec<_> = read_dir.flatten().collect();
+            entries.sort_by(|a, b| {
+                let a_is_dir = a.metadata().map(|m| m.is_dir()).unwrap_or(false);
+                let b_is_dir = b.metadata().map(|m| m.is_dir()).unwrap_or(false);
+
+                if a_is_dir != b_is_dir {
+                    return b_is_dir.cmp(&a_is_dir);
+                }
+                a.file_name().cmp(&b.file_name())
+            });
+
+            for entry in entries {
+                if let Ok(metadata) = entry.metadata() {
+                    if let Ok(name) = entry.file_name().into_string() {
+                        self.render_directory_entry(ui, name, metadata.is_dir());
+                    }
+                }
+            }
+        }
+    }
+
+    /// 渲染中央内容面板
+    fn render_central_panel(&mut self, ui: &mut egui::Ui) {
+        if let Some(error) = &self.error_message {
+            ui.colored_label(Color32::RED, error);
+        } else if !self.file_content.is_empty() {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.add(
+                    TextEdit::multiline(&mut self.file_content)
+                        .desired_width(f32::INFINITY)
+                        .desired_rows(30)
+                        .code_editor(),
+                );
+            });
+        } else {
+            ui.centered_and_justified(|ui| {
+                ui.label("Select a file to view its contents");
+            });
+        }
+    }
 }
 
 // 实现eframe::App，eframe egui库的框架
@@ -194,114 +291,18 @@ impl eframe::App for DirectoryApp {
     /// * `ctx` - egui上下文，用于绘制UI元素
     /// * `_frame` - eframe框架实例，用于控制窗口
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // 左侧面板：文件浏览器
         egui::SidePanel::left("File browser")
             .default_width(200.0)
             .show(ctx, |ui| {
-                // 顶部导航栏
-                ui.horizontal(|ui| {
-                    // 返回上级目录按钮
-                    if ui.button(RichText::new("⬆").size(14.0)).clicked()
-                        && self.current_dir.parent().is_some()
-                    {
-                        self.current_dir.pop();
-                    }
-
-                    // 显示当前路径
-                    egui::ScrollArea::horizontal().show(ui, |ui| {
-                        let path_text = self.current_dir.to_string_lossy().to_string();
-                        ui.label(RichText::new(path_text).size(11.0));
-                    });
-                });
-
+                self.render_navigation_bar(ui);
                 ui.separator();
-
-                // 文件列表区域
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    if let Ok(read_dir) = read_dir(&self.current_dir) {
-                        // 收集并排序目录条目
-                        let mut entries: Vec<_> = read_dir.flatten().collect();
-                        entries.sort_by(|a, b| {
-                            // 首先按照类型排序(目录在前)
-                            let a_is_dir = a.metadata().map(|m| m.is_dir()).unwrap_or(false);
-                            let b_is_dir = b.metadata().map(|m| m.is_dir()).unwrap_or(false);
-
-                            // 如果类型不同，目录排在前面
-                            if a_is_dir != b_is_dir {
-                                return b_is_dir.cmp(&a_is_dir);
-                            }
-
-                            // 如果类型相同，按名称排序
-                            a.file_name().cmp(&b.file_name())
-                        });
-
-                        // 显示排序后的条目
-                        for entry in entries {
-                            if let Ok(metadata) = entry.metadata() {
-                                if let Ok(name) = entry.file_name().into_string() {
-                                    let is_dir = metadata.is_dir();
-                                    let icon = if is_dir { "📁 " } else { "📄 " };
-
-                                    let color = if ui.visuals().dark_mode {
-                                        if is_dir {
-                                            Color32::from_rgb(110, 166, 255)
-                                        } else {
-                                            Color32::from_rgb(255, 210, 120)
-                                        }
-                                    } else {
-                                        if is_dir {
-                                            Color32::from_rgb(30, 100, 200)
-                                        } else {
-                                            Color32::from_rgb(180, 140, 0)
-                                        }
-                                    };
-
-                                    let response = ui.add(
-                                        egui::Button::new(
-                                            RichText::new(format!("{}{}", icon, name))
-                                                .color(color)
-                                                .size(13.0),
-                                        )
-                                        .fill(Color32::TRANSPARENT)
-                                        .min_size(egui::vec2(ui.available_width(), 0.0)),
-                                    );
-
-                                    if response.clicked() {
-                                        if is_dir {
-                                            self.current_dir.push(name);
-                                        } else {
-                                            let file_path = self.current_dir.join(name);
-                                            self.load_file(file_path);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    self.render_file_list(ui);
                 });
             });
 
-        // 中央面板：文件内容显示
         egui::CentralPanel::default().show(ctx, |ui| {
-            if let Some(error) = &self.error_message {
-                // 显示错误信息
-                ui.colored_label(Color32::RED, error);
-            } else if !self.file_content.is_empty() {
-                // 显示文件内容
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.add(
-                        TextEdit::multiline(&mut self.file_content)
-                            .desired_width(f32::INFINITY)
-                            .desired_rows(30)
-                            .code_editor(),
-                    );
-                });
-            } else {
-                // 显示提示信息
-                ui.centered_and_justified(|ui| {
-                    ui.label("Select a file to view its contents");
-                });
-            }
+            self.render_central_panel(ui);
         });
     }
 }
