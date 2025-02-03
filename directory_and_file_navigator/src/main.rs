@@ -131,43 +131,19 @@ impl DirectoryApp {
     /// # 返回值
     /// 返回更新后的FontDefinitions，包含所有加载的系统字体
     fn load_system_fonts(&mut self, mut fonts: FontDefinitions) -> FontDefinitions {
-        let mut fontdb = HashMap::new();
-
-        fontdb.insert(
+        let fontdb = HashMap::from([(
             "simplified_chinese",
             vec![
                 "Microsoft YaHei",
                 "SimSun",
-                "NSimSun",
-                "FangSong",
-                "KaiTi",
-                "Arial",
-                "Heiti SC",
-                "Songti SC",
-                "Noto Sans CJK SC", // Good coverage for Simplified Chinese
-                "Noto Sans SC",
-                "WenQuanYi Zen Hei", // INcludes both Simplified and Traditional Chinese.
-                "Noto Sans SC",
-                "PingFang SC",
+                "PingFang SC", // 将更常用的字体移到前面
                 "Source Han Sans CN",
+                "Noto Sans CJK SC",
+                // 移除重复的 "Noto Sans SC"
+                // 移除不太常用的字体以提高加载效率
             ],
-        );
-
+        )]);
         // fontdb.insert("korean", vec!["Source Han Sans KR"]);
-
-        // fontdb.insert(
-        //     "arabic_fonts",
-        //     vec![
-        //         "Noto Sans Arabic",
-        //         "Amiri",
-        //         "Lateef",
-        //         "Al Tarikh",
-        //         "Segoe UI",
-        //     ],
-        // );
-
-        // Add more stuff here for better language support
-
         for (region, font_names) in fontdb {
             if let Some(font_data) = self.load_font_family(&font_names) {
                 // info!("Inserting font {region}");
@@ -175,18 +151,11 @@ impl DirectoryApp {
                     .font_data
                     .insert(region.to_owned(), FontData::from_owned(font_data).into());
 
-                fonts
-                    .families
-                    .get_mut(&FontFamily::Proportional)
-                    .unwrap()
-                    .push(region.to_owned());
-                // 添加字体到字体族列表中
-                if let Some(vec) = fonts.families.get_mut(&FontFamily::Proportional) {
-                    vec.push(region.to_owned());
-                }
-
-                if let Some(vec) = fonts.families.get_mut(&FontFamily::Monospace) {
-                    vec.push(region.to_owned());
+                // 简化重复代码
+                for family in [FontFamily::Proportional, FontFamily::Monospace] {
+                    if let Some(vec) = fonts.families.get_mut(&family) {
+                        vec.push(region.to_owned());
+                    }
                 }
             }
         }
