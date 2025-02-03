@@ -200,23 +200,19 @@ impl DirectoryApp {
             });
         });
     }
-
+    /// 获取文件/目录条目的颜色
+    fn get_entry_style(&self, is_dir: bool, dark_mode: bool) -> Color32 {
+        match (is_dir, dark_mode) {
+            (true, true) => Color32::from_rgb(110, 166, 255),
+            (true, false) => Color32::from_rgb(30, 100, 200),
+            (false, true) => Color32::from_rgb(255, 210, 120),
+            (false, false) => Color32::from_rgb(180, 140, 0),
+        }
+    }
     /// 渲染文件/目录条目
     fn render_directory_entry(&mut self, ui: &mut egui::Ui, name: String, is_dir: bool) {
         let icon = if is_dir { "📁 " } else { "📄 " };
-        let color = if ui.visuals().dark_mode {
-            if is_dir {
-                Color32::from_rgb(110, 166, 255)
-            } else {
-                Color32::from_rgb(255, 210, 120)
-            }
-        } else {
-            if is_dir {
-                Color32::from_rgb(30, 100, 200)
-            } else {
-                Color32::from_rgb(180, 140, 0)
-            }
-        };
+        let color = self.get_entry_style(is_dir, ui.visuals().dark_mode);
 
         let response = ui.add(
             egui::Button::new(
