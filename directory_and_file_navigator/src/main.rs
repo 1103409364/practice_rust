@@ -63,9 +63,13 @@ impl eframe::App for DirectoryApp {
             egui::SidePanel::right("Text viewer")
                 .min_width(width)
                 .show(ctx, |ui| {
-                    ui.add(TextEdit::code_editor(
-                        TextEdit::multiline(&mut self.file_content).desired_width(width),
-                    ));
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        ui.add(TextEdit::code_editor(
+                            TextEdit::multiline(&mut self.file_content)
+                                .desired_width(width)
+                                .desired_rows(1),
+                        ));
+                    });
                 });
         }
     }
