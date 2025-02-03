@@ -40,10 +40,16 @@ impl eframe::App for DirectoryApp {
             .default_width(200.0)
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    if ui.button("⬆ Up").clicked() && self.current_dir.parent().is_some() {
+                    if ui.button(RichText::new("⬆").size(14.0)).clicked()
+                        && self.current_dir.parent().is_some()
+                    {
                         self.current_dir.pop();
                     }
-                    ui.label(self.current_dir.to_string_lossy().to_string());
+
+                    egui::ScrollArea::horizontal().show(ui, |ui| {
+                        let path_text = self.current_dir.to_string_lossy().to_string();
+                        ui.label(RichText::new(path_text).size(11.0));
+                    });
                 });
 
                 ui.separator();
@@ -55,12 +61,32 @@ impl eframe::App for DirectoryApp {
                                 if let Ok(name) = entry.file_name().into_string() {
                                     let is_dir = metadata.is_dir();
                                     let icon = if is_dir { "📁 " } else { "📄 " };
-                                    let color = if is_dir { Color32::LIGHT_BLUE } else { Color32::GOLD };
-                                    
-                                    if ui.button(RichText::new(format!("{}{}", icon, name))
-                                        .color(color))
-                                        .clicked() 
-                                    {
+
+                                    let color = if ui.visuals().dark_mode {
+                                        if is_dir {
+                                            Color32::from_rgb(110, 166, 255)
+                                        } else {
+                                            Color32::from_rgb(255, 210, 120)
+                                        }
+                                    } else {
+                                        if is_dir {
+                                            Color32::from_rgb(30, 100, 200)
+                                        } else {
+                                            Color32::from_rgb(180, 140, 0)
+                                        }
+                                    };
+
+                                    let response = ui.add(
+                                        egui::Button::new(
+                                            RichText::new(format!("{}{}", icon, name))
+                                                .color(color)
+                                                .size(13.0),
+                                        )
+                                        .fill(Color32::TRANSPARENT)
+                                        .min_size(egui::vec2(ui.available_width(), 0.0)),
+                                    );
+
+                                    if response.clicked() {
                                         if is_dir {
                                             self.current_dir.push(name);
                                         } else {
@@ -84,7 +110,7 @@ impl eframe::App for DirectoryApp {
                         TextEdit::multiline(&mut self.file_content)
                             .desired_width(f32::INFINITY)
                             .desired_rows(30)
-                            .code_editor()
+                            .code_editor(),
                     );
                 });
             } else {
