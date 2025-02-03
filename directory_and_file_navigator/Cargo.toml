@@ -6,3 +6,9 @@ edition = "2021"
 [dependencies]
 eframe = "0.30.0"
 font-kit = "0.14.2"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
