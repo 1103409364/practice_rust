@@ -16,33 +16,52 @@ struct DirectoryApp {
 impl DirectoryApp {
     /// 创建新的应用实例
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // 设置字体支持中文字符，字体文件在 /fonts/SmileySans-Oblique.ttf
+        // 设置字体支持中文字符
         let mut fonts = FontDefinitions::default();
-        // Install my own font (maybe supporting non-latin characters):
-        fonts.font_data.insert(
-            "SmileySans-Oblique".to_owned(),
-            std::sync::Arc::new(
-                // .ttf and .otf supported
-                FontData::from_static(include_bytes!(concat!(
-                    env!("CARGO_MANIFEST_DIR"),
-                    "/assets/fonts/SmileySans-Oblique.otf"
-                ))),
-            ),
-        );
 
-        // Put my font first (highest priority):
+        // 1. 加载外部字体文件
+        // // Install my own font (maybe supporting non-latin characters):
+        // fonts.font_data.insert(
+        //     "SmileySans-Oblique".to_owned(),
+        //     std::sync::Arc::new(
+        //         // .ttf and .otf supported
+        //         FontData::from_static(include_bytes!(concat!(
+        //             env!("CARGO_MANIFEST_DIR"),
+        //             "/assets/fonts/SmileySans-Oblique.otf"
+        //         ))),
+        //     ),
+        // );
+
+        // // Put my font first (highest priority):
+        // // fonts
+        // //     .families
+        // //     .get_mut(&FontFamily::Proportional)
+        // //     .unwrap()
+        // //     .insert(0, "SmileySans-Oblique".to_owned());
+
+        // // Put my font as last fallback for monospace:
         // fonts
         //     .families
-        //     .get_mut(&FontFamily::Proportional)
+        //     .get_mut(&FontFamily::Monospace)
         //     .unwrap()
-        //     .insert(0, "SmileySans-Oblique".to_owned());
+        //     .push("SmileySans-Oblique".to_owned());
 
-        // Put my font as last fallback for monospace:
-        fonts
-            .families
-            .get_mut(&FontFamily::Monospace)
-            .unwrap()
-            .push("SmileySans-Oblique".to_owned());
+        // 2. 加载系统字体
+        let font = std::fs::read("c:/Windows/Fonts/msyh.ttc").unwrap();
+        const FONT_SYSTEM_SANS_SERIF: &'static str = "Microsoft YaHei";
+
+        fonts.font_data.insert(
+            FONT_SYSTEM_SANS_SERIF.to_owned(),
+            FontData::from_owned(font).into(),
+        );
+
+        if let Some(vec) = fonts.families.get_mut(&FontFamily::Proportional) {
+            vec.push(FONT_SYSTEM_SANS_SERIF.to_owned());
+        }
+
+        if let Some(vec) = fonts.families.get_mut(&FontFamily::Monospace) {
+            vec.push(FONT_SYSTEM_SANS_SERIF.to_owned());
+        }
 
         cc.egui_ctx.set_fonts(fonts);
 
