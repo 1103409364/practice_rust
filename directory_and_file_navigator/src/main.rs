@@ -254,30 +254,23 @@ impl DirectoryApp {
             false
         };
 
+        let background_color = if is_current_file {
+            if ui.visuals().dark_mode {
+                Color32::from_rgb(45, 45, 45)
+            } else {
+                Color32::from_rgb(220, 220, 220)
+            }
+        } else {
+            Color32::TRANSPARENT
+        };
+
         let response = ui.add(
             egui::Button::new(
                 RichText::new(format!("{}{}", icon, name))
                     .color(color)
-                    .size(13.0)
-                    .background_color(if is_current_file {
-                        if ui.visuals().dark_mode {
-                            Color32::from_rgb(45, 45, 45)
-                        } else {
-                            Color32::from_rgb(220, 220, 220)
-                        }
-                    } else {
-                        Color32::TRANSPARENT
-                    }),
+                    .size(13.0),
             )
-            .fill(if is_current_file {
-                if ui.visuals().dark_mode {
-                    Color32::from_rgb(45, 45, 45)
-                } else {
-                    Color32::from_rgb(220, 220, 220)
-                }
-            } else {
-                Color32::TRANSPARENT
-            })
+            .fill(background_color)
             .min_size(egui::vec2(ui.available_width(), 0.0)),
         );
 
