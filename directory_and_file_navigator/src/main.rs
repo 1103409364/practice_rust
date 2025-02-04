@@ -263,6 +263,15 @@ impl DirectoryApp {
         if let Some(error) = &self.error_message {
             ui.colored_label(Color32::RED, error);
         } else if !self.file_content.is_empty() {
+            // 添加关闭按钮
+            ui.horizontal(|ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button(RichText::new("❌").size(14.0)).clicked() {
+                        self.file_content.clear(); // 清空文件内容
+                    }
+                });
+            });
+
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.add(
                     TextEdit::multiline(&mut self.file_content)
