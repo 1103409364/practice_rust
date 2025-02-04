@@ -387,18 +387,22 @@ impl DirectoryApp {
             ui.separator(); // 分割线
 
             // 文件内容显示
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                let response = ui.add(
-                    TextEdit::multiline(&mut self.file_content)
-                        .desired_width(f32::INFINITY)
-                        .desired_rows(30)
-                        .code_editor(),
-                );
-                // 监听文件内容变化
-                if response.changed() {
-                    self.is_modified = true;
-                }
-            });
+            let available_height = ui.available_height(); // 获取可用高度
+            egui::ScrollArea::vertical()
+                .auto_shrink([false; 2])  // 禁止自动收缩
+                .show(ui, |ui| {
+                    let response = ui.add_sized(
+                        egui::vec2(ui.available_width(), available_height),
+                        TextEdit::multiline(&mut self.file_content)
+                            .desired_width(f32::INFINITY)
+                            .desired_rows(30)
+                            .code_editor(),
+                    );
+                    // 监听文件内容变化
+                    if response.changed() {
+                        self.is_modified = true;
+                    }
+                });
         } else {
             ui.centered_and_justified(|ui| {
                 ui.label("Select a file to view its contents");
