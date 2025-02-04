@@ -243,13 +243,41 @@ impl DirectoryApp {
         let icon = if is_dir { "📁 " } else { "📄 " };
         let color = self.get_entry_style(is_dir, ui.visuals().dark_mode);
 
+        // 检查当前条目是否为打开的文件
+        let is_current_file = if let Some(current_file) = &self.current_file {
+            current_file
+                .file_name()
+                .and_then(|f| f.to_str())
+                .map(|f| f == name)
+                .unwrap_or(false)
+        } else {
+            false
+        };
+
         let response = ui.add(
             egui::Button::new(
                 RichText::new(format!("{}{}", icon, name))
                     .color(color)
-                    .size(13.0),
+                    .size(13.0)
+                    .background_color(if is_current_file {
+                        if ui.visuals().dark_mode {
+                            Color32::from_rgb(45, 45, 45)
+                        } else {
+                            Color32::from_rgb(220, 220, 220)
+                        }
+                    } else {
+                        Color32::TRANSPARENT
+                    }),
             )
-            .fill(Color32::TRANSPARENT)
+            .fill(if is_current_file {
+                if ui.visuals().dark_mode {
+                    Color32::from_rgb(45, 45, 45)
+                } else {
+                    Color32::from_rgb(220, 220, 220)
+                }
+            } else {
+                Color32::TRANSPARENT
+            })
             .min_size(egui::vec2(ui.available_width(), 0.0)),
         );
 
