@@ -16,6 +16,7 @@ struct DirectoryApp {
     file_content: String,          // 当前打开文件的内容
     current_dir: PathBuf,          // 当前浏览的目录路径
     error_message: Option<String>, // 错误信息，如果有的话
+    current_file: Option<PathBuf>, // 当前打开的文件路径
 }
 
 impl DirectoryApp {
@@ -79,6 +80,7 @@ impl DirectoryApp {
             file_content: String::new(),
             current_dir: current_dir().unwrap_or_else(|_| PathBuf::from(".")), // 默认使用当前目录
             error_message: None,
+            current_file: None,
         };
 
         // 3. 使用 load_system_fonts 方法加载系统字体 https://github.com/emilk/egui/discussions/1344
@@ -176,9 +178,10 @@ impl DirectoryApp {
     /// # 参数
     /// * `file_path` - 要加载的文件路径
     fn load_file(&mut self, file_path: PathBuf) {
-        match read_to_string(file_path) {
+        match read_to_string(&file_path) {
             Ok(content) => {
                 self.file_content = content;
+                self.current_file = Some(file_path); // 保存当前文件路径
                 self.error_message = None;
             }
             Err(e) => self.set_error(e),
@@ -196,7 +199,7 @@ impl DirectoryApp {
 
             egui::ScrollArea::horizontal().show(ui, |ui| {
                 let path_text = self.current_dir.to_string_lossy().to_string();
-                ui.label(RichText::new(path_text).size(11.0));
+                ui.label(RichText::new(path_text).size(12.0));
             });
         });
     }
@@ -263,14 +266,24 @@ impl DirectoryApp {
         if let Some(error) = &self.error_message {
             ui.colored_label(Color32::RED, error);
         } else if !self.file_content.is_empty() {
-            // 添加关闭按钮
             ui.horizontal(|ui| {
+                // 显示文件路径作为标题
+                if let Some(file_path) = &self.current_file {
+                    egui::ScrollArea::horizontal().show(ui, |ui| {
+                        ui.label(RichText::new(file_path.to_string_lossy()).size(12.0));
+                    });
+                }
+
+                // 将关闭按钮放在最右边
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button(RichText::new("❌").size(14.0)).clicked() {
-                        self.file_content.clear(); // 清空文件内容
+                    if ui.button(RichText::new("❌").size(11.0)).clicked() {
+                        self.file_content.clear();
+                        self.current_file = None; // 清除当前文件路径
                     }
                 });
             });
+
+            ui.separator();
 
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.add(
