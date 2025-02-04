@@ -190,7 +190,10 @@ impl DirectoryApp {
 
     /// 渲染顶部导航栏
     fn render_navigation_bar(&mut self, ui: &mut egui::Ui) {
+        ui.add_space(6.0);
         ui.horizontal(|ui| {
+            // ui.set_min_height(24.0); // 设置最小高度
+
             if ui.button(RichText::new("⬆").size(14.0)).clicked()
                 && self.current_dir.parent().is_some()
             {
