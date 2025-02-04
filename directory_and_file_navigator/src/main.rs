@@ -346,32 +346,37 @@ impl DirectoryApp {
             });
         });
     }
+    /// 渲染对话框
+    fn render_save_dialog(&mut self, ui: &mut egui::Ui) {
+        egui::Window::new("Save Changes")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0)) // 居中显示
+            .show(ui.ctx(), |ui| {
+                ui.label("Do you want to save the changes?");
+                ui.horizontal(|ui| {
+                    if ui.button("Save").clicked() {
+                        self.save_file();
+                        self.show_save_dialog = false;
+                        self.handle_pending_action();
+                    }
+                    if ui.button("Don't Save").clicked() {
+                        self.is_modified = false;
+                        self.show_save_dialog = false;
+                        self.handle_pending_action();
+                    }
+                    if ui.button("Cancel").clicked() {
+                        self.show_save_dialog = false;
+                        self.pending_action = None;
+                    }
+                });
+            });
+    }
     /// 渲染中央内容面板
     fn render_central_panel(&mut self, ui: &mut egui::Ui) {
         // 渲染保存对话框
         if self.show_save_dialog {
-            egui::Window::new("Save Changes")
-                .collapsible(false)
-                .resizable(false)
-                .show(ui.ctx(), |ui| {
-                    ui.label("Do you want to save the changes?");
-                    ui.horizontal(|ui| {
-                        if ui.button("Save").clicked() {
-                            self.save_file();
-                            self.show_save_dialog = false;
-                            self.handle_pending_action();
-                        }
-                        if ui.button("Don't Save").clicked() {
-                            self.is_modified = false;
-                            self.show_save_dialog = false;
-                            self.handle_pending_action();
-                        }
-                        if ui.button("Cancel").clicked() {
-                            self.show_save_dialog = false;
-                            self.pending_action = None;
-                        }
-                    });
-                });
+            self.render_save_dialog(ui);
         }
 
         if let Some(error) = &self.error_message {
@@ -389,7 +394,7 @@ impl DirectoryApp {
                         .desired_rows(30)
                         .code_editor(),
                 );
-
+                // 监听文件内容变化
                 if response.changed() {
                     self.is_modified = true;
                 }
