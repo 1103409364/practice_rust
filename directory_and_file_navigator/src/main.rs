@@ -314,14 +314,14 @@ impl DirectoryApp {
             }
         }
     }
-    /// 渲染区顶栏
+    /// 渲染文件编辑区顶栏
     fn render_top_bar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             // 显示文件路径作为标题，显示修改状态
             if let Some(file_path) = &self.current_file {
                 egui::ScrollArea::horizontal().show(ui, |ui| {
                     let title = if self.is_modified {
-                        format!("*{}", file_path.to_string_lossy())
+                        format!("{}*", file_path.to_string_lossy())
                     } else {
                         file_path.to_string_lossy().to_string()
                     };
@@ -389,7 +389,7 @@ impl DirectoryApp {
             // 文件内容显示
             let available_height = ui.available_height(); // 获取可用高度
             egui::ScrollArea::vertical()
-                .auto_shrink([false; 2])  // 禁止自动收缩
+                .auto_shrink([false; 2]) // 禁止自动收缩
                 .show(ui, |ui| {
                     let response = ui.add_sized(
                         egui::vec2(ui.available_width(), available_height),
