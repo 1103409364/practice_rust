@@ -435,6 +435,16 @@ impl DirectoryApp {
         self.current_file = None;
         self.is_modified = false;
     }
+
+    /// 处理键盘快捷键
+    fn handle_keyboard_shortcuts(&mut self, ctx: &egui::Context) {
+        // 保存文件快捷键 (Ctrl + S)
+        if ctx.input(|i| i.modifiers.ctrl && i.key_pressed(egui::Key::S)) {
+            if self.is_modified {
+                self.save_file();
+            }
+        }
+    }
 }
 
 // 实现eframe::App，eframe egui库的框架
@@ -445,6 +455,8 @@ impl eframe::App for DirectoryApp {
     /// * `ctx` - egui上下文，用于绘制UI元素
     /// * `_frame` - eframe框架实例，用于控制窗口
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.handle_keyboard_shortcuts(ctx);
+
         egui::SidePanel::left("File browser")
             .default_width(200.0)
             .show(ctx, |ui| {
