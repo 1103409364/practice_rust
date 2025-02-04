@@ -13,10 +13,19 @@ use std::{
 /// 目录浏览应用的主要结构
 #[derive(Default)]
 struct DirectoryApp {
-    file_content: String,          // 当前打开文件的内容
-    current_dir: PathBuf,          // 当前浏览的目录路径
-    error_message: Option<String>, // 错误信息，如果有的话
-    current_file: Option<PathBuf>, // 当前打开的文件路径
+    file_content: String,                  // 当前打开文件的内容
+    current_dir: PathBuf,                  // 当前浏览的目录路径
+    error_message: Option<String>,         // 错误信息，如果有的话
+    current_file: Option<PathBuf>,         // 当前打开的文件路径
+    is_modified: bool,                     // 新增：标记文件是否被修改
+    show_save_dialog: bool,                // 新增：是否显示保存对话框
+    pending_action: Option<PendingAction>, // 新增：待处理的动作
+}
+
+// 新增：定义待处理的动作
+enum PendingAction {
+    CloseFile,
+    OpenFile(PathBuf),
 }
 
 impl DirectoryApp {
@@ -81,6 +90,9 @@ impl DirectoryApp {
             current_dir: current_dir().unwrap_or_else(|_| PathBuf::from(".")), // 默认使用当前目录
             error_message: None,
             current_file: None,
+            is_modified: false,      // 新增
+            show_save_dialog: false, // 新增
+            pending_action: None,    // 新增
         };
 
         // 3. 使用 load_system_fonts 方法加载系统字体 https://github.com/emilk/egui/discussions/1344
@@ -178,11 +190,22 @@ impl DirectoryApp {
     /// # 参数
     /// * `file_path` - 要加载的文件路径
     fn load_file(&mut self, file_path: PathBuf) {
+        if self.is_modified {
+            self.show_save_dialog = true;
+            self.pending_action = Some(PendingAction::OpenFile(file_path));
+            return;
+        }
+        self.load_file_internal(file_path);
+    }
+
+    /// 内部加载文件的方法
+    fn load_file_internal(&mut self, file_path: PathBuf) {
         match read_to_string(&file_path) {
             Ok(content) => {
                 self.file_content = content;
                 self.current_file = Some(file_path); // 保存当前文件路径
                 self.error_message = None;
+                self.is_modified = false;
             }
             Err(e) => self.set_error(e),
         }
@@ -263,44 +286,121 @@ impl DirectoryApp {
             }
         }
     }
-
+    /// 渲染区顶栏
+    fn render_top_bar(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            // 显示文件路径作为标题，显示修改状态
+            if let Some(file_path) = &self.current_file {
+                egui::ScrollArea::horizontal().show(ui, |ui| {
+                    let title = if self.is_modified {
+                        format!("*{}", file_path.to_string_lossy())
+                    } else {
+                        file_path.to_string_lossy().to_string()
+                    };
+                    ui.label(RichText::new(title).size(12.0));
+                });
+            }
+            // 将关闭按钮、保存按钮放在最右边
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button(RichText::new("❌").size(11.0)).clicked() {
+                    if self.is_modified {
+                        self.show_save_dialog = true;
+                        self.pending_action = Some(PendingAction::CloseFile);
+                    } else {
+                        self.close_file();
+                    }
+                }
+                if self.is_modified {
+                    if ui.button(RichText::new("💾").size(11.0)).clicked() {
+                        self.save_file();
+                    }
+                }
+            });
+        });
+    }
     /// 渲染中央内容面板
     fn render_central_panel(&mut self, ui: &mut egui::Ui) {
+        // 渲染保存对话框
+        if self.show_save_dialog {
+            egui::Window::new("Save Changes")
+                .collapsible(false)
+                .resizable(false)
+                .show(ui.ctx(), |ui| {
+                    ui.label("Do you want to save the changes?");
+                    ui.horizontal(|ui| {
+                        if ui.button("Save").clicked() {
+                            self.save_file();
+                            self.show_save_dialog = false;
+                            self.handle_pending_action();
+                        }
+                        if ui.button("Don't Save").clicked() {
+                            self.is_modified = false;
+                            self.show_save_dialog = false;
+                            self.handle_pending_action();
+                        }
+                        if ui.button("Cancel").clicked() {
+                            self.show_save_dialog = false;
+                            self.pending_action = None;
+                        }
+                    });
+                });
+        }
+
         if let Some(error) = &self.error_message {
             ui.colored_label(Color32::RED, error);
         } else if !self.file_content.is_empty() {
-            ui.horizontal(|ui| {
-                // 显示文件路径作为标题
-                if let Some(file_path) = &self.current_file {
-                    egui::ScrollArea::horizontal().show(ui, |ui| {
-                        ui.label(RichText::new(file_path.to_string_lossy()).size(12.0));
-                    });
-                }
+            self.render_top_bar(ui);
 
-                // 将关闭按钮放在最右边
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button(RichText::new("❌").size(11.0)).clicked() {
-                        self.file_content.clear();
-                        self.current_file = None; // 清除当前文件路径
-                    }
-                });
-            });
+            ui.separator(); // 分割线
 
-            ui.separator();
-
+            // 文件内容显示
             egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.add(
+                let response = ui.add(
                     TextEdit::multiline(&mut self.file_content)
                         .desired_width(f32::INFINITY)
                         .desired_rows(30)
                         .code_editor(),
                 );
+
+                if response.changed() {
+                    self.is_modified = true;
+                }
             });
         } else {
             ui.centered_and_justified(|ui| {
                 ui.label("Select a file to view its contents");
             });
         }
+    }
+
+    // 新增：保存文件的方法
+    fn save_file(&mut self) {
+        if let Some(path) = &self.current_file {
+            match std::fs::write(path, &self.file_content) {
+                Ok(_) => {
+                    self.is_modified = false;
+                    self.error_message = None;
+                }
+                Err(e) => self.set_error(e),
+            }
+        }
+    }
+
+    // 新增：处理待处理的动作
+    fn handle_pending_action(&mut self) {
+        if let Some(action) = self.pending_action.take() {
+            match action {
+                PendingAction::CloseFile => self.close_file(),
+                PendingAction::OpenFile(path) => self.load_file_internal(path),
+            }
+        }
+    }
+
+    // 新增：关闭文件的方法
+    fn close_file(&mut self) {
+        self.file_content.clear();
+        self.current_file = None;
+        self.is_modified = false;
     }
 }
 
