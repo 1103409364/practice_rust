@@ -1,8 +1,11 @@
 use std::fmt::Display;
 
+const DAY: i64 = 24 * 60;
+const HOUR: i64 = 60;
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Clock {
-    minutes: i32,
+    minutes: i64,
 }
 
 impl Display for Clock {
@@ -12,23 +15,15 @@ impl Display for Clock {
 }
 
 impl Clock {
-    pub fn new(hours: i32, minutes: i32) -> Self {
+    pub fn new(hours: i64, minutes: i64) -> Self {
         // todo!("Construct a new Clock from {hours} hours and {minutes} minutes");
         Clock {
-            minutes: Self::get_minutes(hours * 60 + minutes),
+            minutes: (((hours * HOUR + minutes) % DAY) + DAY) % DAY,
         }
     }
 
-    pub fn add_minutes(&mut self, minutes: i32) -> Self {
+    pub fn add_minutes(&mut self, minutes: i64) -> Self {
         // todo!("Add {minutes} minutes to existing Clock time");
-        Clock {
-            minutes: Self::get_minutes(self.minutes + minutes),
-        }
-    }
-    fn get_minutes(minutes: i32) -> i32 {
-        match minutes {
-            x if x < 0 => x % (24 * 60) + 24 * 60,
-            x => x % (24 * 60),
-        }
+        Self::new(0, self.minutes + minutes)
     }
 }
