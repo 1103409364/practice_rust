@@ -1,1 +1,3 @@
-# wr 目录结构配置无效，初始化 git，让 wr 识别为根目录。使用父仓库管理
+# wr 目录结构配置无效，初始化 git，让 wr 识别为根目录。workshop-runner 不支持自定义目录结构
+# ln -s 100-exercises-to-learn-rust/exercises exercises 使用符号链接，会被 git 识别到
+# 使用父仓库管理
