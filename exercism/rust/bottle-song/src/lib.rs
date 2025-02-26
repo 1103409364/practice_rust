@@ -16,13 +16,14 @@ pub fn recite(start_bottles: u32, take_down: u32) -> String {
         (10, "ten".to_string()),
     ]);
 
-    let s = (1..=take_down)
+    (1..=take_down)
         .map(|n| {
+            let n1 = start_bottles - n + 1;
             let s1 = format!(
-                "{} green bottles hanging on the wall,\n",
+                "{} green {} hanging on the wall,\n",
                 // 首字母大写
                 number_map
-                    .get(&(start_bottles - n + 1))
+                    .get(&n1)
                     .unwrap_or(&"".to_string())
                     .chars()
                     .enumerate()
@@ -32,16 +33,25 @@ pub fn recite(start_bottles: u32, take_down: u32) -> String {
                             _ => c.to_string(),
                         }
                     })
-                    .collect::<String>()
+                    .collect::<String>(),
+                if n1 > 1 || n1 == 0 {
+                    "bottles"
+                } else {
+                    "bottle"
+                }
             );
+            let n2 = start_bottles - n;
             let s2 = format!(
-                "There'll be {} green bottles hanging on the wall.",
-                number_map
-                    .get(&(start_bottles - n))
-                    .unwrap_or(&"".to_string())
+                "There'll be {} green {} hanging on the wall.",
+                number_map.get(&n2).unwrap_or(&"".to_string()),
+                if n2 > 1 || n2 == 0 {
+                    "bottles"
+                } else {
+                    "bottle"
+                }
             );
             s1.repeat(2) + "And if one green bottle should accidentally fall,\n" + &s2
         })
-        .collect::<String>();
-    s
+        .collect::<Vec<String>>()
+        .join("\n\n")
 }
