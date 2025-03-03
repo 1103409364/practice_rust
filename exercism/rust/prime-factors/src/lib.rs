@@ -2,7 +2,7 @@ pub fn factors(mut n: u64) -> Vec<u64> {
     // todo!("This should calculate the prime factors of {n}")
     let mut factors = Vec::new();
     let mut i = 2;
-    // 通过逐步分解保证质数因子，所以不用判断质数
+    // 通过 i 从小到大，逐步分解质数因子
     while i * i <= n {
         if n % i == 0 {
             factors.push(i);
