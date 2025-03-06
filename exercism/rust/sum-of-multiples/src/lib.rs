@@ -1,3 +1,4 @@
+// 优化：找 1 到 limit 之间能被 factor 整除的数
 pub fn sum_of_multiples(limit: u32, factors: &[u32]) -> u32 {
     // todo!("Sum the multiples of all of {factors:?} which are less than {limit}")
     factors
