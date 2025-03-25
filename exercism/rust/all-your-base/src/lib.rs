@@ -44,8 +44,8 @@ pub fn convert(number: &[u32], from_base: u32, to_base: u32) -> Result<Vec<u32>,
         _ => {}
     }
 
-    if number.iter().any(|&n| n >= from_base) {
-        return Err(Error::InvalidDigit(*number.iter().max().unwrap()));
+    if let Some(&n) = number.iter().find(|&&n| n >= from_base) {
+        return Err(Error::InvalidDigit(n));
     }
 
     let mut n = number.iter().fold(0, |acc, n| acc * from_base + n);
