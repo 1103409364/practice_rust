@@ -33,6 +33,8 @@ impl Allergies {
 
     // 检查一个人是否对特定的过敏原过敏
     pub fn is_allergic_to(&self, allergen: &Allergen) -> bool {
+        // 与运算用来检查一个值是否包含另一个值的所有位信息
+        //  self.allergens & (*allergen as u32) == allergen 的结果为 true，则意味着 allergen 中所有为 1 的位在 self.allergens 中也为 1。换句话说，self.allergens 包含了 allergen 的所有位信息。这表明这个人对 allergen 代表的过敏原过敏。
         // 使用位操作来确定一个人是否对特定的过敏原过敏
         self.allergens & (*allergen as u32) != 0
     }
