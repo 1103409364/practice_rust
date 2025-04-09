@@ -1,149 +1,104 @@
+/// 这个模块实现了一个字母算术谜题（也称为密码算术）求解器。
+/// 字母算术谜题是一种数学谜题，其中字母被用来表示数字。
+/// 目标是找到一个字母到数字的映射，使得给定的算术等式成立。
+/// 例如："SEND + MORE = MONEY"，其中每个字母代表一个唯一的数字。
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
-/// # 解题思路
-/// 这是一个字母算术问题（Alphametics）的求解器。在这种问题中，每个字母代表0-9之间的一个唯一数字。
-/// 我们需要找到一种字母到数字的映射，使得等式成立。
+// 核心思想是在进行排列测试之前转换等式，以尽可能快地计算。
+// 最简单的测试数据模型就是字母因子（系数）的列表，
+//     这样因子乘以字母值并求和后，对于正确的解会得到0。
+// 为此，我们需要遍历等式，根据字母在单词中的位置（x1, x10, x100等）
+//     来累加和记住每个字母的因子。
+// 在"=="之后，我们需要改变因子的符号，反向解析输入字符串会更方便。
+// 对字母/因子进行排序也会影响性能，这是我发现的。
+// 此外，我们必须检查找到的解是否符合"首位不能为0"的规则，
+//     所以我们需要知道哪些字母出现在编码数字的第一位。
+
+/// 计算等式中每个字母的因子。
 ///
-/// 实现采用回溯法（Backtracking）：
-/// 1. 解析输入的等式，提取加数和和数
-/// 2. 确定所有唯一字母和每个单词的首字母（首字母不能为0）
-/// 3. 检查是否有超过10个唯一字母（因为只有10个数字可用）
-/// 4. 使用回溯法为每个字母尝试不同的数字分配
-/// 5. 检查最终的分配是否使等式成立
+/// # 参数
+/// * `input` - 输入的等式字符串（例如："SEND + MORE = MONEY"）
+///
+/// # 返回值
+/// 一个元组，包含：
+/// * 等式中唯一字母的向量
+/// * 每个字母对应的因子向量
+///
+/// 因子表示基于字母在等式中位置的系数。
+/// 例如，在"SEND"中，S的因子是1000，E是100，N是10，D是1。
+fn calc_factors(input: &str) -> (Vec<char>, Vec<i64>) {
+    let mut factors = HashMap::new();
+    let mut sign = -1; // 从等式右侧开始，使用负号
+    let mut pos = 0; // 位置乘数（1, 10, 100等）
+    for c in input.chars().filter(|c| !c.is_whitespace()).rev() {
+        match c {
+            '=' => {
+                sign = 1; // 切换到等式左侧，使用正号
+                pos = 0 // 重置位置计数器
+            }
+            '+' => pos = 0, // 对每个项重置位置计数器
+            _ => {
+                *factors.entry(c).or_insert(0) += sign * 10_i64.pow(pos);
+                pos += 1;
+            }
+        }
+    }
+    // 按因子的绝对值排序以提高性能
+    factors.into_iter().sorted_by_key(|(_, v)| -v.abs()).unzip()
+}
+
+/// 解决字母算术谜题。
+///
+/// # 参数
+/// * `input` - 输入的等式字符串（例如："SEND + MORE = MONEY"）
+///
+/// # 返回值
+/// * `Some(HashMap<char, u8>)` - 如果找到解，返回字母到数字的映射
+/// * `None` - 如果不存在解
+///
+/// # 示例
+/// ```
+/// use alphametics::solve;
+///
+/// let solution = solve("SEND + MORE = MONEY").unwrap();
+/// assert_eq!(solution.get(&'S'), Some(&9));
+/// ```
 pub fn solve(input: &str) -> Option<HashMap<char, u8>> {
-    // 解析等式，按 " == " 分割
-    let parts: Vec<&str> = input.split(" == ").collect();
-    if parts.len() != 2 {
-        return None;
-    }
+    // 找出所有出现在数字首位的字母
+    let firsts = input
+        .split(&['+', '='])
+        .filter_map(|s| s.trim().chars().next())
+        .collect::<HashSet<_>>();
 
-    let left_side = parts[0];
-    let right_side = parts[1];
+    // 计算每个字母的因子
+    let (letters, factors) = calc_factors(&input);
 
-    // 提取所有加数，按 " + " 分割
-    let addends: Vec<&str> = left_side.split(" + ").collect();
-    let sum = right_side;
+    // 尝试所有可能的数字排列
+    for perm in (0..=9).permutations(letters.len()) {
+        // 计算因子 * 数字的和
+        let sum = perm
+            .iter()
+            .enumerate()
+            .map(|(i, v)| v * factors.get(i).unwrap())
+            .sum::<i64>();
 
-    // 收集所有唯一字母和首字母
-    let mut all_letters = HashSet::new();
-    let mut first_letters = HashSet::new();
-
-    for word in addends.iter().chain(std::iter::once(&sum)) {
-        let word = word.trim();
-        if !word.is_empty() {
-            // 将单词的所有字母添加到唯一字母集合中
-            all_letters.extend(word.chars());
-            // 记录单词的首字母，这些字母不能映射为0
-            first_letters.insert(word.chars().next().unwrap());
+        // 检查这个排列是否是有效解：
+        // 1. 和应该为0（等式平衡）
+        // 2. 首位数字不能为0
+        if sum == 0
+            && !perm
+                .iter()
+                .enumerate()
+                .any(|(i, v)| *v == 0 && firsts.contains(letters.get(i).unwrap()))
+        {
+            // 创建并返回解映射
+            return Some(HashMap::from_iter(
+                perm.iter()
+                    .enumerate()
+                    .map(|(i, v)| (*letters.get(i).unwrap(), *v as u8)),
+            ));
         }
     }
-
-    // 检查是否有超过10个唯一字母（因为只有0-9这10个数字可用）
-    if all_letters.len() > 10 {
-        return None;
-    }
-
-    // 将集合转换为向量，方便索引
-    let letters: Vec<char> = all_letters.into_iter().collect();
-
-    // 初始化回溯所需的状态
-    let mut assignments = HashMap::new(); // 字母到数字的映射
-    let mut used_digits = HashSet::new(); // 已使用的数字集合
-
-    // 开始回溯搜索
-    if backtrack(
-        &letters,
-        &first_letters,
-        &addends,
-        sum,
-        0,
-        &mut assignments,
-        &mut used_digits,
-    ) {
-        Some(assignments) // 找到有效解决方案
-    } else {
-        None // 无解
-    }
-}
-
-/// 回溯函数，尝试为每个字母分配一个数字
-fn backtrack(
-    letters: &[char],                    // 所有唯一字母
-    first_letters: &HashSet<char>,       // 所有单词的首字母
-    addends: &[&str],                    // 等式左侧的加数
-    sum: &str,                           // 等式右侧的和
-    index: usize,                        // 当前处理的字母索引
-    assignments: &mut HashMap<char, u8>, // 字母到数字的当前映射
-    used_digits: &mut HashSet<u8>,       // 已使用的数字集合
-) -> bool {
-    // 如果所有字母都已分配数字，检查等式是否成立
-    if index == letters.len() {
-        return is_valid_solution(addends, sum, assignments);
-    }
-
-    let letter = letters[index];
-
-    // 尝试每个可能的数字(0-9)
-    for digit in 0..=9 {
-        // 如果数字已被使用，跳过
-        if used_digits.contains(&digit) {
-            continue;
-        }
-
-        // 如果是首字母且数字为0，跳过（避免前导零）
-        if digit == 0 && first_letters.contains(&letter) {
-            continue;
-        }
-
-        // 为当前字母分配数字
-        assignments.insert(letter, digit);
-        used_digits.insert(digit);
-
-        // 递归处理下一个字母
-        if backtrack(
-            letters,
-            first_letters,
-            addends,
-            sum,
-            index + 1,
-            assignments,
-            used_digits,
-        ) {
-            return true; // 找到有效解决方案
-        }
-
-        // 回溯：移除当前分配
-        assignments.remove(&letter);
-        used_digits.remove(&digit);
-    }
-
-    // 所有可能性都尝试失败
-    false
-}
-
-/// 检查当前分配是否使等式成立
-fn is_valid_solution(
-    addends: &[&str],                // 等式左侧的加数
-    sum: &str,                       // 等式右侧的和
-    assignments: &HashMap<char, u8>, // 字母到数字的映射
-) -> bool {
-    // 计算每个加数的值
-    let addend_values: Vec<u64> = addends
-        .iter()
-        .map(|word| word_to_number(word, assignments))
-        .collect();
-
-    // 计算和的值
-    let sum_value = word_to_number(sum, assignments);
-
-    // 检查等式是否成立：所有加数之和等于和值
-    addend_values.iter().sum::<u64>() == sum_value
-}
-
-/// 将单词转换为数字
-fn word_to_number(word: &str, assignments: &HashMap<char, u8>) -> u64 {
-    // 使用fold函数将字母依次转换为数字并组合成一个数
-    // 对于每个字母，将累积值乘以10并加上该字母对应的数字
-    word.chars()
-        .fold(0, |acc, c| acc * 10 + assignments[&c] as u64)
+    None
 }
