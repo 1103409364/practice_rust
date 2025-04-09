@@ -26,7 +26,7 @@ use std::collections::{HashMap, HashSet};
 /// * 每个字母对应的因子向量
 ///
 /// 因子表示基于字母在等式中位置的系数。
-/// 例如，在"SEND"中，S的因子是1000，E是100，N是10，D是1。
+/// 例如，在"SEND"中，S的因子是1000，E是100，N是10，D是1。得到 {S:1000,E:100,N:10,D:1}
 fn calc_factors(input: &str) -> (Vec<char>, Vec<i64>) {
     let mut factors = HashMap::new();
     let mut sign = -1; // 从等式右侧开始，使用负号
@@ -45,7 +45,7 @@ fn calc_factors(input: &str) -> (Vec<char>, Vec<i64>) {
         }
     }
     // 按因子的绝对值排序以提高性能
-    factors.into_iter().sorted_by_key(|(_, v)| -v.abs()).unzip()
+    factors.into_iter().sorted_by_key(|(_, v)| -v.abs()).unzip() // unzip 将一个元组转换为两个独立的迭代器
 }
 
 /// 解决字母算术谜题。
@@ -71,7 +71,7 @@ pub fn solve(input: &str) -> Option<HashMap<char, u8>> {
         .filter_map(|s| s.trim().chars().next())
         .collect::<HashSet<_>>();
 
-    // 计算每个字母的因子
+    // 计算每个字母的因子 letters ["S", "E", "N", "D", "M", "O", "R", "Y"] factors [1000, 100, 10, 1, 1000, 100, 10, 1]
     let (letters, factors) = calc_factors(&input);
 
     // 尝试所有可能的数字排列
@@ -92,7 +92,7 @@ pub fn solve(input: &str) -> Option<HashMap<char, u8>> {
                 .enumerate()
                 .any(|(i, v)| *v == 0 && firsts.contains(letters.get(i).unwrap()))
         {
-            // 创建并返回解映射
+            // 创建并返回解映射 字母: 数字
             return Some(HashMap::from_iter(
                 perm.iter()
                     .enumerate()
